@@ -80,7 +80,6 @@ _CONFIG_FOR_DOC = "T5Config"
 remat = nn_partitioning.remat
 
 
-@partial(jax.vmap, in_axes=(0, 0, 0, 0, None, None, None, None, None, None, None, None)) #vectorize over batches
 def dot_product_attention_weights_graph(query: Array,
                                   key: Array,
                                   receivers: Array,
@@ -817,7 +816,8 @@ class FlaxT5GraphAttention(nn.Module): #TODO: copy this and adapt it to graph at
 
         # Softmax(QK^T)
         print(f"sizes: {receivers, senders}")
-        attn_weights = dot_product_attention_weights_graph(
+        #vectorize over batches
+        attn_weights = jax.vmap(lambda query_states, key_states, receivers, senders: dot_product_attention_weights_graph(
             query_states,
             key_states,
             receivers,
@@ -829,6 +829,7 @@ class FlaxT5GraphAttention(nn.Module): #TODO: copy this and adapt it to graph at
             deterministic=deterministic,
             dtype=self.dtype,
         )
+        )(query_states, key_states, receivers, senders)
 
         # multiply with value states
 
