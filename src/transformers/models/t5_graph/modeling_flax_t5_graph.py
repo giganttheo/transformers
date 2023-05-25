@@ -1349,7 +1349,7 @@ T5_INPUTS_DOCSTRING = r"""
 """
 
 
-class FlaxT5PreTrainedModel(FlaxPreTrainedModel):
+class FlaxGraphT5PreTrainedModel(FlaxPreTrainedModel):
     """
     An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
     models.
@@ -1789,11 +1789,11 @@ class FlaxT5Module(nn.Module):
         )
 
 
-class FlaxT5Model(FlaxT5PreTrainedModel):
+class FlaxGraphT5Model(FlaxGraphT5PreTrainedModel):
     module_class = FlaxT5Module
 
 
-append_call_sample_docstring(FlaxT5Model, _CHECKPOINT_FOR_DOC, FlaxSeq2SeqModelOutput, _CONFIG_FOR_DOC)
+append_call_sample_docstring(FlaxGraphT5Model, _CHECKPOINT_FOR_DOC, FlaxSeq2SeqModelOutput, _CONFIG_FOR_DOC)
 
 FLAX_T5_MODEL_DOCSTRING = """
     Returns:
@@ -1822,8 +1822,8 @@ FLAX_T5_MODEL_DOCSTRING = """
 """
 
 
-overwrite_call_docstring(FlaxT5Model, T5_INPUTS_DOCSTRING + FLAX_T5_MODEL_DOCSTRING)
-append_replace_return_docstrings(FlaxT5Model, output_type=FlaxSeq2SeqLMOutput, config_class=_CONFIG_FOR_DOC)
+overwrite_call_docstring(FlaxGraphT5Model, T5_INPUTS_DOCSTRING + FLAX_T5_MODEL_DOCSTRING)
+append_replace_return_docstrings(FlaxGraphT5Model, output_type=FlaxSeq2SeqLMOutput, config_class=_CONFIG_FOR_DOC)
 
 
 @add_start_docstrings(
@@ -1880,7 +1880,7 @@ class FlaxT5EncoderModule(nn.Module):
         return encoder_outputs
 
 
-class FlaxT5EncoderModel(FlaxT5PreTrainedModel):
+class FlaxGraphT5EncoderModel(FlaxGraphT5PreTrainedModel):
     module_class = FlaxT5EncoderModule
 
     @add_start_docstrings_to_model_forward(T5_ENCODE_INPUTS_DOCSTRING)
@@ -2037,7 +2037,7 @@ class FlaxT5ForConditionalGenerationModule(nn.Module):
         )
 
 
-class FlaxT5ForConditionalGeneration(FlaxT5PreTrainedModel):
+class FlaxGraphT5ForConditionalGeneration(FlaxGraphT5PreTrainedModel):
     module_class = FlaxT5ForConditionalGenerationModule
 
     @add_start_docstrings(T5_DECODE_INPUTS_DOCSTRING)
@@ -2233,8 +2233,8 @@ FLAX_T5_CONDITIONAL_GENERATION_DOCSTRING = """
 
 
 overwrite_call_docstring(
-    FlaxT5ForConditionalGeneration, T5_INPUTS_DOCSTRING + FLAX_T5_CONDITIONAL_GENERATION_DOCSTRING
+    FlaxGraphT5ForConditionalGeneration, T5_INPUTS_DOCSTRING + FLAX_T5_CONDITIONAL_GENERATION_DOCSTRING
 )
 append_replace_return_docstrings(
-    FlaxT5ForConditionalGeneration, output_type=FlaxSeq2SeqLMOutput, config_class=_CONFIG_FOR_DOC
+    FlaxGraphT5ForConditionalGeneration, output_type=FlaxSeq2SeqLMOutput, config_class=_CONFIG_FOR_DOC
 )

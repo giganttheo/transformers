@@ -6888,6 +6888,7 @@ if TYPE_CHECKING:
         )
         from .models.speech_encoder_decoder import FlaxSpeechEncoderDecoderModel
         from .models.t5 import FlaxT5EncoderModel, FlaxT5ForConditionalGeneration, FlaxT5Model, FlaxT5PreTrainedModel
+        from .models.t5_graph import FlaxGraphT5EncoderModel, FlaxGraphT5ForConditionalGeneration, FlaxGraphT5Model, FlaxGraphT5PreTrainedModel
         from .models.vision_encoder_decoder import FlaxVisionEncoderDecoderModel
         from .models.vision_text_dual_encoder import FlaxVisionTextDualEncoderModel
         from .models.vit import FlaxViTForImageClassification, FlaxViTModel, FlaxViTPreTrainedModel
