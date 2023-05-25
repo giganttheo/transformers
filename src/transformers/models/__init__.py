@@ -177,6 +177,7 @@ from . import (
     swinv2,
     switch_transformers,
     t5,
+    t5_graph,
     table_transformer,
     tapas,
     tapex,
