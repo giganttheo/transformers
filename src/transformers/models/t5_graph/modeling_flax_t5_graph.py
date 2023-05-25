@@ -1389,7 +1389,9 @@ class FlaxGraphT5PreTrainedModel(FlaxPreTrainedModel):
         input_size = input_shape[1]
         senders = jnp.array([jnp.arange(input_size)]*batch_size)
         receivers = jnp.array([jnp.arange(input_size)]*batch_size)
-        
+
+        print(senders.shape)
+
         args = [input_ids, senders, receivers, attention_mask]
         if self.module_class not in [FlaxT5EncoderModule]:
             decoder_input_ids = jnp.ones_like(input_ids)
