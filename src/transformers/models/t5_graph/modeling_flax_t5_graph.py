@@ -1389,7 +1389,7 @@ class FlaxGraphT5PreTrainedModel(FlaxPreTrainedModel):
         input_size = input_shape[1]
         senders = jnp.array([jnp.arange(input_size)]*batch_size)
         receivers = jnp.array([jnp.arange(input_size)]*batch_size)
-
+        print(input_shape)
         print(senders.shape)
 
         args = [input_ids, senders, receivers, attention_mask]
