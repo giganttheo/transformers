@@ -1183,9 +1183,9 @@ class FlaxT5Stack(nn.Module):
 
         outputs = self.block(
             hidden_states,
-            senders,
-            receivers,
             attention_mask=attention_mask,
+            senders=senders,
+            receivers=receivers,
             encoder_hidden_states=encoder_hidden_states,
             encoder_attention_mask=encoder_attention_mask,
             output_attentions=output_attentions,
