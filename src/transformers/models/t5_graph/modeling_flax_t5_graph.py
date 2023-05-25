@@ -837,6 +837,8 @@ class FlaxT5GraphAttention(nn.Module): #TODO: copy this and adapt it to graph at
         #changed (mb TODO because of vmap over batches)
         # attention weights applied to the values for every edge:
 
+        print(attn_weights.shape, receivers.shape, senders.shape)
+
         @jax.vmap #over batches
         def get_attn_output(attn_weights, receivers, senders):
             values = jnp.einsum('eh,ehd->ehd', attn_weights, value_states[senders]) #(num_edges, heads, d_v)
