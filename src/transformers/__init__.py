@@ -3765,6 +3765,9 @@ else:
     _import_structure["models.t5"].extend(
         ["FlaxT5EncoderModel", "FlaxT5ForConditionalGeneration", "FlaxT5Model", "FlaxT5PreTrainedModel"]
     )
+    _import_structure["models.graph_t5"].extend(
+        ["FlaxGraphT5EncoderModel", "FlaxGraphT5ForConditionalGeneration", "FlaxGraphT5Model", "FlaxGraphT5PreTrainedModel"]
+    )
     _import_structure["models.vision_encoder_decoder"].append("FlaxVisionEncoderDecoderModel")
     _import_structure["models.vision_text_dual_encoder"].extend(["FlaxVisionTextDualEncoderModel"])
     _import_structure["models.vit"].extend(["FlaxViTForImageClassification", "FlaxViTModel", "FlaxViTPreTrainedModel"])
