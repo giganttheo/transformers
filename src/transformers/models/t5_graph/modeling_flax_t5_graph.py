@@ -837,10 +837,10 @@ class FlaxT5GraphAttention(nn.Module): #TODO: copy this and adapt it to graph at
         #changed (mb TODO because of vmap over batches)
         # attention weights applied to the values for every edge:
 
-        print(attn_weights.shape, receivers.shape, senders.shape)
+        print(attn_weights.shape, value_states.shape, receivers.shape, senders.shape)
 
         @jax.vmap #over batches
-        def get_attn_output(attn_weights, receivers, senders):
+        def get_attn_output(attn_weights, value_states, receivers, senders):
             values = jnp.einsum('eh,ehd->ehd', attn_weights, value_states[senders]) #(num_edges, heads, d_v)
             #summing over the nodes
             attn_output = segment_sum(values,
@@ -848,7 +848,7 @@ class FlaxT5GraphAttention(nn.Module): #TODO: copy this and adapt it to graph at
                                 num_segments=seq_length) #(seq_len, heads, d_v)
             return attn_output
 
-        attn_output = get_attn_output(attn_weights, receivers, senders)
+        attn_output = get_attn_output(attn_weights, value_states, receivers, senders)
 
         # bring back to (batch_size, seq_length, d_model)
         attn_output = self._merge_heads(attn_output)
