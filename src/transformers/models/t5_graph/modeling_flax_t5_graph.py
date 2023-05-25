@@ -80,7 +80,7 @@ _CONFIG_FOR_DOC = "T5Config"
 remat = nn_partitioning.remat
 
 
-@jax.vmap #vectorize over batches
+@partial(jax.vmap, in_axes=(0, 0, 0, 0, None, None, None, None, None, None, None, None)) #vectorize over batches
 def dot_product_attention_weights_graph(query: Array,
                                   key: Array,
                                   receivers: Array,
