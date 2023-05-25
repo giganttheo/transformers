@@ -816,6 +816,7 @@ class FlaxT5GraphAttention(nn.Module): #TODO: copy this and adapt it to graph at
             dropout_rng = self.make_rng("dropout")
 
         # Softmax(QK^T)
+        print(f"sizes: {receivers, senders}")
         attn_weights = dot_product_attention_weights_graph(
             query_states,
             key_states,
