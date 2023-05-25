@@ -123,7 +123,7 @@ def dot_product_attention_weights_graph(query: Array,
 
 
 #Graph attention
-def dot_product_attention_graph(q, k, v, receivers, senders):
+def dot_product_attention_graph(q, k, v, senders, receivers):
     seq_len, heads, d_k = k.shape
     #compute attention logits: <Q,K>
     attn_logits = jnp.einsum('ehd,ehd->eh', q[receivers], k[senders]) #(num_edges, heads)
@@ -836,7 +836,7 @@ class FlaxT5GraphAttention(nn.Module): #TODO: copy this and adapt it to graph at
         # attention weights applied to the values for every edge:
 
         @jax.vmap #over batches
-        def get_attn_output(attn_weights, senders, receivers):
+        def get_attn_output(attn_weights, receivers, senders):
             values = jnp.einsum('eh,ehd->ehd', attn_weights, value_states[senders]) #(num_edges, heads, d_v)
             #summing over the nodes
             attn_output = segment_sum(values,
@@ -844,7 +844,7 @@ class FlaxT5GraphAttention(nn.Module): #TODO: copy this and adapt it to graph at
                                 num_segments=seq_length) #(seq_len, heads, d_v)
             return attn_output
 
-        attn_output = get_attn_output(attn_weights, senders, receivers)
+        attn_output = get_attn_output(attn_weights, receivers, senders)
 
         # bring back to (batch_size, seq_length, d_model)
         attn_output = self._merge_heads(attn_output)
@@ -878,8 +878,8 @@ class FlaxT5LayerSelfAttention(nn.Module):
     def __call__(
         self,
         hidden_states,
-        senders,
         receivers,
+        senders,
         attention_mask=None,
         position_bias=None,
         output_attentions=False,
@@ -917,8 +917,8 @@ class FlaxT5LayerCrossAttention(nn.Module):
         self,
         hidden_states,
         key_value_states,
-        senders,
         receivers,
+        senders,
         attention_mask=None,
         position_bias=None,
         output_attentions=False,
@@ -927,8 +927,8 @@ class FlaxT5LayerCrossAttention(nn.Module):
         normed_hidden_states = self.layer_norm(hidden_states)
         attention_output = self.EncDecAttention(
             normed_hidden_states,
-            senders,
             receivers,
+            senders,
             attention_mask=attention_mask,
             key_value_states=key_value_states,
             position_bias=position_bias,
@@ -964,8 +964,8 @@ class FlaxT5Block(nn.Module):
     def __call__(
         self,
         hidden_states,
-        senders,
         receivers,
+        senders,
         attention_mask=None,
         position_bias=None,
         encoder_hidden_states=None,
@@ -978,8 +978,8 @@ class FlaxT5Block(nn.Module):
     ):
         self_attention_outputs = self.layer[0](
             hidden_states,
-            senders,
             receivers,
+            senders,
             attention_mask=attention_mask,
             position_bias=position_bias,
             output_attentions=output_attentions,
@@ -993,8 +993,8 @@ class FlaxT5Block(nn.Module):
         if do_cross_attention:
             cross_attention_outputs = self.layer[1](
                 hidden_states,
-                senders,
                 receivers,
+                senders,
                 key_value_states=encoder_hidden_states,
                 attention_mask=encoder_attention_mask,
                 position_bias=encoder_decoder_position_bias,
@@ -1031,8 +1031,8 @@ class FlaxT5LayerCollection(nn.Module):
     def __call__(
         self,
         hidden_states,
-        senders,
         receivers,
+        senders,
         attention_mask=None,
         position_bias=None,
         encoder_hidden_states=None,
@@ -1044,8 +1044,8 @@ class FlaxT5LayerCollection(nn.Module):
     ):
         return self.layer(
             hidden_states,
-            senders,
             receivers,
+            senders,
             attention_mask=attention_mask,
             position_bias=position_bias,
             encoder_hidden_states=encoder_hidden_states,
@@ -1112,8 +1112,8 @@ class FlaxT5BlockCollection(nn.Module):
 
             layer_outputs = layer_module(
                 hidden_states,
-                senders,
                 receivers,
+                senders,
                 attention_mask,
                 position_bias,
                 encoder_hidden_states,
@@ -1184,8 +1184,8 @@ class FlaxT5Stack(nn.Module):
         outputs = self.block(
             hidden_states,
             attention_mask=attention_mask,
-            senders=senders,
             receivers=receivers,
+            senders=senders,
             encoder_hidden_states=encoder_hidden_states,
             encoder_attention_mask=encoder_attention_mask,
             output_attentions=output_attentions,
@@ -1392,7 +1392,7 @@ class FlaxGraphT5PreTrainedModel(FlaxPreTrainedModel):
         print(input_shape)
         print(senders.shape)
 
-        args = [input_ids, senders, receivers, attention_mask]
+        args = [input_ids, receivers, senders, attention_mask]
         if self.module_class not in [FlaxT5EncoderModule]:
             decoder_input_ids = jnp.ones_like(input_ids)
             decoder_attention_mask = jnp.ones_like(input_ids)
@@ -1876,8 +1876,8 @@ class FlaxT5EncoderModule(nn.Module):
         # Encode if needed (training, first prediction pass)
         encoder_outputs = self.encoder(
             input_ids=input_ids,
-            senders=senders,
             receivers=receivers,
+            senders=senders,
             attention_mask=attention_mask,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
@@ -1992,8 +1992,8 @@ class FlaxT5ForConditionalGenerationModule(nn.Module):
         # Encode
         encoder_outputs = self.encoder(
             input_ids=input_ids,
-            senders=senders,
             receivers=receivers,
+            senders=senders,
             attention_mask=attention_mask,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
@@ -2006,8 +2006,8 @@ class FlaxT5ForConditionalGenerationModule(nn.Module):
         # Decode
         decoder_outputs = self.decoder(
             input_ids=decoder_input_ids,
-            senders=senders,
             receivers=receivers,
+            senders=senders,
             attention_mask=decoder_attention_mask,
             encoder_hidden_states=hidden_states,
             encoder_attention_mask=attention_mask,
@@ -2053,8 +2053,8 @@ class FlaxGraphT5ForConditionalGeneration(FlaxGraphT5PreTrainedModel):
     def decode(
         self,
         decoder_input_ids,
-        senders,
         receivers,
+        senders,
         encoder_outputs,
         encoder_attention_mask: Optional[jnp.ndarray] = None,
         decoder_attention_mask: Optional[jnp.ndarray] = None,
@@ -2119,12 +2119,12 @@ class FlaxGraphT5ForConditionalGeneration(FlaxGraphT5PreTrainedModel):
         else:
             mutable = False
 
-        def _decoder_forward(module, decoder_input_ids, senders, receivers, decoder_attention_mask, **kwargs):
+        def _decoder_forward(module, decoder_input_ids, receivers, senders, decoder_attention_mask, **kwargs):
             decoder_module = module._get_decoder_module()
             decoder_outputs = decoder_module(
                 decoder_input_ids,
-                senders,
                 receivers,
+                senders,
                 decoder_attention_mask,
                 **kwargs,
             )
@@ -2146,8 +2146,8 @@ class FlaxGraphT5ForConditionalGeneration(FlaxGraphT5PreTrainedModel):
 
         outputs = self.module.apply(
             inputs,
-            senders,
-            receivers,
+            receivers=receivers,
+            senders=senders,
             decoder_input_ids=jnp.array(decoder_input_ids, dtype="i4"),
             decoder_attention_mask=jnp.array(decoder_attention_mask, dtype="i4"),
             encoder_hidden_states=encoder_hidden_states,
