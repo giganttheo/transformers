@@ -893,8 +893,8 @@ class FlaxT5LayerSelfAttention(nn.Module):
         normed_hidden_states = self.layer_norm(hidden_states)
         attention_output = self.SelfAttention(
             normed_hidden_states,
-            senders=senders,
             receivers=receivers,
+            senders=senders,
             attention_mask=attention_mask,
             position_bias=position_bias,
             output_attentions=output_attentions,
@@ -1048,8 +1048,8 @@ class FlaxT5LayerCollection(nn.Module):
     ):
         return self.layer(
             hidden_states,
-            receivers,
-            senders,
+            receivers=receivers,
+            senders=senders,
             attention_mask=attention_mask,
             position_bias=position_bias,
             encoder_hidden_states=encoder_hidden_states,
@@ -1069,7 +1069,7 @@ class FlaxT5BlockCollection(nn.Module):
     def setup(self):
         self.causal = self.config.causal
         if self.gradient_checkpointing:
-            FlaxT5CheckpointLayer = remat(FlaxT5LayerCollection, static_argnums=(6, 7, 8))
+            FlaxT5CheckpointLayer = remat(FlaxT5LayerCollection, static_argnums=(8, 9, 10))
             self.blocks = [
                 FlaxT5CheckpointLayer(
                     self.config,
@@ -1093,9 +1093,9 @@ class FlaxT5BlockCollection(nn.Module):
     def __call__(
         self,
         hidden_states=None,
-        attention_mask=None,
-        senders=[],
         receivers=[],
+        senders=[],
+        attention_mask=None,
         encoder_hidden_states=None,
         encoder_attention_mask=None,
         output_attentions: bool = False,
@@ -1114,7 +1114,7 @@ class FlaxT5BlockCollection(nn.Module):
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
 
-            layer_outputs = layer_module(
+            layer_outputs = layer_module( 
                 hidden_states,
                 receivers,
                 senders,
@@ -1171,9 +1171,9 @@ class FlaxT5Stack(nn.Module):
     def __call__(
         self,
         input_ids=None,
-        attention_mask=None,
-        senders=[],
         receivers=[],
+        senders=[],
+        attention_mask=None,
         encoder_hidden_states=None,
         encoder_attention_mask=None,
         output_attentions: bool = False,
@@ -1187,9 +1187,9 @@ class FlaxT5Stack(nn.Module):
 
         outputs = self.block(
             hidden_states,
-            attention_mask=attention_mask,
             receivers=receivers,
             senders=senders,
+            attention_mask=attention_mask,
             encoder_hidden_states=encoder_hidden_states,
             encoder_attention_mask=encoder_attention_mask,
             output_attentions=output_attentions,
@@ -1753,6 +1753,8 @@ class FlaxT5Module(nn.Module):
     def __call__(
         self,
         input_ids=None,
+        receivers=[],
+        senders=[],
         attention_mask=None,
         decoder_input_ids=None,
         decoder_attention_mask=None,
@@ -1767,6 +1769,8 @@ class FlaxT5Module(nn.Module):
         # Encode if needed (training, first prediction pass)
         encoder_outputs = self.encoder(
             input_ids=input_ids,
+            receivers=receivers,
+            senders=senders,
             attention_mask=attention_mask,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
@@ -1777,6 +1781,8 @@ class FlaxT5Module(nn.Module):
         # Decode
         decoder_outputs = self.decoder(
             input_ids=decoder_input_ids,
+            receivers=receivers,
+            senders=senders,
             attention_mask=decoder_attention_mask,
             encoder_hidden_states=encoder_outputs[0],
             encoder_attention_mask=attention_mask,
