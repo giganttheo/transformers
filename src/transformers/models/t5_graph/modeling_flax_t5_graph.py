@@ -815,7 +815,7 @@ class FlaxT5GraphAttention(nn.Module): #TODO: copy this and adapt it to graph at
             dropout_rng = self.make_rng("dropout")
 
         # Softmax(QK^T)
-        print(f"sizes: {receivers, senders}")
+        # print(f"sizes: {receivers, senders}")
         #vectorize over batches
         attn_weights = jax.vmap(lambda query_states, key_states, receivers, senders: dot_product_attention_weights_graph(
             query_states,
@@ -837,7 +837,7 @@ class FlaxT5GraphAttention(nn.Module): #TODO: copy this and adapt it to graph at
         #changed (mb TODO because of vmap over batches)
         # attention weights applied to the values for every edge:
 
-        print(attn_weights.shape, value_states.shape, receivers.shape, senders.shape)
+        # print(attn_weights.shape, value_states.shape, receivers.shape, senders.shape)
 
         @jax.vmap #over batches
         def get_attn_output(attn_weights, value_states, receivers, senders):
@@ -1393,8 +1393,8 @@ class FlaxGraphT5PreTrainedModel(FlaxPreTrainedModel):
         input_size = input_shape[1]
         senders = jnp.array([jnp.arange(input_size)]*batch_size)
         receivers = jnp.array([jnp.arange(input_size)]*batch_size)
-        print(input_shape)
-        print(senders.shape)
+        # print(input_shape)
+        # print(senders.shape)
 
         args = [input_ids, receivers, senders, attention_mask]
         if self.module_class not in [FlaxT5EncoderModule]:
