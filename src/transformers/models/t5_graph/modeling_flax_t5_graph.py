@@ -1515,6 +1515,8 @@ class FlaxGraphT5PreTrainedModel(FlaxPreTrainedModel):
     def encode(
         self,
         input_ids: jnp.ndarray,
+        receivers,
+        senders,
         attention_mask: Optional[jnp.ndarray] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
@@ -1559,6 +1561,8 @@ class FlaxGraphT5PreTrainedModel(FlaxPreTrainedModel):
         return self.module.apply(
             {"params": params or self.params},
             input_ids=jnp.array(input_ids, dtype="i4"),
+            receivers=jnp.array(receivers, dtype="i4"),
+            senders=jnp.array(senders, dtype="i4"),
             attention_mask=jnp.array(attention_mask, dtype="i4"),
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
@@ -1574,6 +1578,8 @@ class FlaxGraphT5PreTrainedModel(FlaxPreTrainedModel):
         self,
         decoder_input_ids,
         encoder_outputs,
+        receivers,
+        senders,
         encoder_attention_mask: Optional[jnp.ndarray] = None,
         decoder_attention_mask: Optional[jnp.ndarray] = None,
         past_key_values: dict = None,
@@ -1647,6 +1653,8 @@ class FlaxGraphT5PreTrainedModel(FlaxPreTrainedModel):
 
         outputs = self.module.apply(
             inputs,
+            receivers=jnp.array(receivers, dtype="i4"),
+            senders=jnp.array(senders, dtype="i4"),
             decoder_input_ids=jnp.array(decoder_input_ids, dtype="i4"),
             decoder_attention_mask=jnp.array(decoder_attention_mask, dtype="i4"),
             encoder_hidden_states=encoder_hidden_states,
