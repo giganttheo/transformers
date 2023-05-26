@@ -1424,6 +1424,8 @@ class FlaxGraphT5PreTrainedModel(FlaxPreTrainedModel):
     def __call__(
         self,
         input_ids: jnp.ndarray,
+        receivers,
+        senders,
         attention_mask: Optional[jnp.ndarray] = None,
         decoder_input_ids: jnp.ndarray = None,
         decoder_attention_mask: Optional[jnp.ndarray] = None,
@@ -1460,6 +1462,8 @@ class FlaxGraphT5PreTrainedModel(FlaxPreTrainedModel):
         return self.module.apply(
             {"params": params or self.params},
             input_ids=jnp.array(input_ids, dtype="i4"),
+            receivers=jnp.array(receivers, dtype="i4"),
+            senders=jnp.array(senders, dtype="i4"),
             attention_mask=jnp.array(attention_mask, dtype="i4"),
             decoder_input_ids=jnp.array(decoder_input_ids, dtype="i4"),
             decoder_attention_mask=jnp.array(decoder_attention_mask, dtype="i4"),
