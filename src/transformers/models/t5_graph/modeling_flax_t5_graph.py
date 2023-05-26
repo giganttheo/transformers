@@ -2158,9 +2158,9 @@ class FlaxGraphT5ForConditionalGeneration(FlaxGraphT5PreTrainedModel):
             decoder_module = module._get_decoder_module()
             decoder_outputs = decoder_module(
                 decoder_input_ids,
-                receivers,
-                senders,
                 decoder_attention_mask,
+                receivers=receivers,
+                senders=senders,
                 **kwargs,
             )
 
