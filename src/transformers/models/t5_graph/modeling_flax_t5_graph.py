@@ -1492,6 +1492,16 @@ class FlaxGraphT5PreTrainedModel(FlaxPreTrainedModel):
         # init input variables to retrieve cache
         decoder_input_ids = jnp.ones((batch_size, max_length), dtype="i4")
         decoder_attention_mask = jnp.ones_like(decoder_input_ids)
+        receivers=[]
+        senders=[]
+        #fully connected adj list
+        for i in range(max_length):
+            for j in range(max_length):
+                senders.append(i)
+                receivers.append(j)
+        
+        receivers = jnp.array([receivers]*batch_size)
+        senders = jnp.array([senders]*batch_size)
 
         def _decoder_forward(module, decoder_input_ids, decoder_attention_mask, **kwargs):
             decoder_module = module._get_decoder_module()
@@ -1505,6 +1515,8 @@ class FlaxGraphT5PreTrainedModel(FlaxPreTrainedModel):
             jax.random.PRNGKey(0),
             decoder_input_ids=decoder_input_ids,
             decoder_attention_mask=decoder_attention_mask,
+            receivers=receivers,
+            senders=senders,
             encoder_hidden_states=encoder_outputs[0],
             init_cache=True,
             method=_decoder_forward,  # we only need to call the decoder to init the cache
