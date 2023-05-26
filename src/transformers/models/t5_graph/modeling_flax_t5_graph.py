@@ -106,7 +106,7 @@ def dot_product_attention_weights_graph(query: Array,
     seq_len, heads, depth = query.shape
     query = query / jnp.sqrt(depth).astype(dtype)
     # attn weight shape is (..., sequence_length, num_heads)
-    print(receivers)
+    # print(receivers)
     attn_weights = jnp.einsum('ehd,ehd->eh', query[receivers], key[senders],
                                 precision=precision)
 
@@ -2224,6 +2224,8 @@ class FlaxGraphT5ForConditionalGeneration(FlaxGraphT5PreTrainedModel):
         self,
         decoder_input_ids,
         max_length,
+        receivers,
+        senders,
         attention_mask: Optional[jnp.DeviceArray] = None,
         decoder_attention_mask: Optional[jnp.DeviceArray] = None,
         encoder_outputs=None,
@@ -2243,6 +2245,8 @@ class FlaxGraphT5ForConditionalGeneration(FlaxGraphT5PreTrainedModel):
             )
 
         return {
+            "receivers": receivers,
+            "senders": senders,
             "past_key_values": past_key_values,
             "encoder_outputs": encoder_outputs,
             "encoder_attention_mask": attention_mask,
