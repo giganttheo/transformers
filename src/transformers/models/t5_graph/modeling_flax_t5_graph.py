@@ -1171,11 +1171,11 @@ class FlaxT5Stack(nn.Module):
     def __call__(
         self,
         input_ids=None,
-        receivers=[],
-        senders=[],
         attention_mask=None,
         encoder_hidden_states=None,
         encoder_attention_mask=None,
+        receivers=[],
+        senders=[],
         output_attentions: bool = False,
         output_hidden_states: bool = False,
         return_dict: bool = True,
@@ -1556,14 +1556,14 @@ class FlaxGraphT5PreTrainedModel(FlaxPreTrainedModel):
 
         def _encoder_forward(module, input_ids, attention_mask, **kwargs):
             encode_module = module._get_encoder_module()
-            return encode_module(input_ids, attention_mask, **kwargs)
+            return encode_module(input_ids, attention_mask=attention_mask, **kwargs)
 
         return self.module.apply(
             {"params": params or self.params},
             input_ids=jnp.array(input_ids, dtype="i4"),
+            attention_mask=jnp.array(attention_mask, dtype="i4"),
             receivers=jnp.array(receivers, dtype="i4"),
             senders=jnp.array(senders, dtype="i4"),
-            attention_mask=jnp.array(attention_mask, dtype="i4"),
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
@@ -1646,17 +1646,17 @@ class FlaxGraphT5PreTrainedModel(FlaxPreTrainedModel):
         def _decoder_forward(module, decoder_input_ids, decoder_attention_mask, **kwargs):
             decoder_module = module._get_decoder_module()
             return decoder_module(
-                decoder_input_ids,
-                decoder_attention_mask,
+                decoder_input_ids=decoder_input_ids,
+                decoder_attention_mask=decoder_attention_mask,
                 **kwargs,
             )
 
         outputs = self.module.apply(
             inputs,
-            receivers=jnp.array(receivers, dtype="i4"),
-            senders=jnp.array(senders, dtype="i4"),
             decoder_input_ids=jnp.array(decoder_input_ids, dtype="i4"),
             decoder_attention_mask=jnp.array(decoder_attention_mask, dtype="i4"),
+            receivers=jnp.array(receivers, dtype="i4"),
+            senders=jnp.array(senders, dtype="i4"),
             encoder_hidden_states=encoder_hidden_states,
             encoder_attention_mask=jnp.array(encoder_attention_mask, dtype="i4"),
             output_attentions=output_attentions,
