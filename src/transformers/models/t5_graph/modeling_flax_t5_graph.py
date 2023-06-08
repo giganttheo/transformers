@@ -2413,6 +2413,7 @@ class FlaxT5GraphForConditionalGeneration(FlaxT5GraphPreTrainedModel):
         train: bool = False,
         params: dict = None,
         dropout_rng: PRNGKey = None,
+        **kwargs
     ):
         r"""
         Returns:
