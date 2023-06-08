@@ -2202,7 +2202,7 @@ class FlaxT5EncoderModule(nn.Module):
         encoder_config.is_decoder = False
         encoder_config.is_encoder_decoder = False
         encoder_config.causal = False
-        self.encoder = FlaxT5Stack(
+        self.encoder = FlaxT5GraphStack(
             encoder_config,
             embed_tokens=self.shared,
             dtype=self.dtype,
