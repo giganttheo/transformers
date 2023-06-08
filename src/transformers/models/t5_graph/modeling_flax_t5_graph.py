@@ -1495,6 +1495,7 @@ class FlaxT5Stack(nn.Module):
         return_dict: bool = True,
         deterministic: bool = True,
         init_cache: bool = False,
+        **kwargs,
     ):
         hidden_states = self.embed_tokens(input_ids)
         hidden_states = self.dropout(hidden_states, deterministic=deterministic)
