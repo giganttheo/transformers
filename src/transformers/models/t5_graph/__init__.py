@@ -141,10 +141,10 @@ if TYPE_CHECKING:
         pass
     else:
         from .modeling_flax_t5 import (
-            FlaxT5EncoderModel,
-            FlaxT5ForConditionalGeneration,
-            FlaxT5Model,
-            FlaxT5PreTrainedModel,
+            FlaxT5GraphEncoderModel,
+            FlaxT5GraphForConditionalGeneration,
+            FlaxT5GraphModel,
+            FlaxT5GraphPreTrainedModel,
         )
 
 
