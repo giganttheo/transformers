@@ -2145,7 +2145,7 @@ class FlaxT5GraphModule(nn.Module):
 
 
 class FlaxT5GraphModel(FlaxT5GraphPreTrainedModel):
-    module_class = FlaxT5Module
+    module_class = FlaxT5GraphModule
 
 
 append_call_sample_docstring(FlaxT5GraphModel, _CHECKPOINT_FOR_DOC, FlaxSeq2SeqModelOutput, _CONFIG_FOR_DOC)
