@@ -1280,8 +1280,8 @@ class FlaxT5GraphBlockCollection(nn.Module):
         for i, layer_module in enumerate(self.blocks):
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
-            print(receivers, senders)
-            print(layer_module)
+            # print(receivers, senders)
+            # print(layer_module)
             layer_outputs = layer_module( 
                 hidden_states,
                 receivers,
