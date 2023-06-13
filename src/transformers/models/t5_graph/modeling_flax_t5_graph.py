@@ -1726,13 +1726,18 @@ class FlaxT5GraphPreTrainedModel(FlaxPreTrainedModel):
         input_size = input_shape[1]
         senders = jnp.array([jnp.arange(input_size)]*batch_size)
         receivers = jnp.array([jnp.arange(input_size)]*batch_size)
-        encdec_senders = jnp.array([jnp.arange(input_size)]*batch_size)
-        encdec_receivers = jnp.array([jnp.arange(input_size)]*batch_size)
+        # encdec_senders = jnp.array([jnp.arange(input_size)]*batch_size)
+        # encdec_receivers = jnp.array([jnp.arange(input_size)]*batch_size)
         # print(input_shape)
         # print(senders.shape)
 
-        args = [input_ids, receivers, senders, encdec_receivers, encdec_senders, attention_mask]
+        # args = [input_ids, receivers, senders, attention_mask]
+        if self.module_class == FlaxT5EncoderModule:
+            #encoder input
+            args = [input_ids, receivers, senders, attention_mask]
         if self.module_class not in [FlaxT5EncoderModule]:
+            #decoder input
+            args = [input_ids, encdec_receivers, encdec_senders, attention_mask]
             decoder_input_ids = jnp.ones_like(input_ids)
             decoder_attention_mask = jnp.ones_like(input_ids)
             args.extend([decoder_input_ids, decoder_attention_mask])
@@ -2266,7 +2271,7 @@ class FlaxT5EncoderModule(nn.Module):
 
         return encoder_outputs
 
-
+#TODO tochange?
 class FlaxT5GraphEncoderModel(FlaxT5GraphPreTrainedModel):
     module_class = FlaxT5EncoderModule
 
@@ -2387,8 +2392,8 @@ class FlaxT5GraphForConditionalGenerationModule(nn.Module):
         # Decode
         decoder_outputs = self.decoder(
             input_ids=decoder_input_ids,
-            encdec_receivers=encdec_receivers,
-            encdec_senders=encdec_senders,
+            receivers=encdec_receivers, #changed? is it workng?
+            senders=encdec_senders,
             attention_mask=decoder_attention_mask,
             encoder_hidden_states=hidden_states,
             encoder_attention_mask=attention_mask,
