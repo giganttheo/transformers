@@ -1127,7 +1127,7 @@ class FlaxT5Block(nn.Module):
             cross_attention_outputs = self.layer[1](
                 hidden_states,
                 receivers=receivers,
-                senders=senders;
+                senders=senders,
                 key_value_states=encoder_hidden_states,
                 attention_mask=encoder_attention_mask,
                 position_bias=encoder_decoder_position_bias,
