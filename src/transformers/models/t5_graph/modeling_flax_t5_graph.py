@@ -1124,7 +1124,7 @@ class FlaxT5Block(nn.Module):
 
         do_cross_attention = self.causal and encoder_hidden_states is not None
         if do_cross_attention:
-            print(receivers, senders)
+            # print(receivers, senders)
             cross_attention_outputs = self.layer[1](
                 hidden_states,
                 receivers=receivers,
@@ -1280,7 +1280,7 @@ class FlaxT5GraphBlockCollection(nn.Module):
         for i, layer_module in enumerate(self.blocks):
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
-
+            print(receivers, senders)
             layer_outputs = layer_module( 
                 hidden_states,
                 receivers,
