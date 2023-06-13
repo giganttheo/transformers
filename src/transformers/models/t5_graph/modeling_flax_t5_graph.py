@@ -1164,8 +1164,8 @@ class FlaxT5GraphLayerCollection(nn.Module):
     def __call__(
         self,
         hidden_states,
-        receivers,
-        senders,
+        receivers=[],
+        senders=[],
         attention_mask=None,
         position_bias=None,
         encoder_hidden_states=None,
@@ -1202,8 +1202,8 @@ class FlaxT5LayerCollection(nn.Module):
     def __call__(
         self,
         hidden_states,
-        receivers,
-        senders,
+        receivers=[],
+        senders=[],
         attention_mask=None,
         position_bias=None,
         encoder_hidden_states=None,
@@ -1281,6 +1281,7 @@ class FlaxT5GraphBlockCollection(nn.Module):
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
             print(receivers, senders)
+            print(layer_module)
             layer_outputs = layer_module( 
                 hidden_states,
                 receivers,
