@@ -1124,6 +1124,7 @@ class FlaxT5Block(nn.Module):
 
         do_cross_attention = self.causal and encoder_hidden_states is not None
         if do_cross_attention:
+            print(receivers, senders)
             cross_attention_outputs = self.layer[1](
                 hidden_states,
                 receivers=receivers,
