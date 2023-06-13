@@ -1175,6 +1175,7 @@ class FlaxT5GraphLayerCollection(nn.Module):
         deterministic=True,
         init_cache=False,
     ):
+        print(receivers, senders, "ICI")
         return self.layer(
             hidden_states,
             receivers=receivers,
