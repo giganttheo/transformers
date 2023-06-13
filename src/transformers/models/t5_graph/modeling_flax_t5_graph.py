@@ -1126,6 +1126,8 @@ class FlaxT5Block(nn.Module):
         if do_cross_attention:
             cross_attention_outputs = self.layer[1](
                 hidden_states,
+                receivers=receivers,
+                senders=senders;
                 key_value_states=encoder_hidden_states,
                 attention_mask=encoder_attention_mask,
                 position_bias=encoder_decoder_position_bias,
@@ -1138,7 +1140,7 @@ class FlaxT5Block(nn.Module):
             attention_outputs = attention_outputs + cross_attention_outputs[1:]
 
         # Apply Feed Forward layer
-        hidden_states = self.layer[-1](hidden_states, receivers=receivers, senders=senders, deterministic=deterministic)
+        hidden_states = self.layer[-1](hidden_states, deterministic=deterministic)
 
         outputs = (hidden_states,)
 
