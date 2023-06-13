@@ -1138,7 +1138,7 @@ class FlaxT5Block(nn.Module):
             attention_outputs = attention_outputs + cross_attention_outputs[1:]
 
         # Apply Feed Forward layer
-        hidden_states = self.layer[-1](hidden_states, receivers=receivers, senders=senders, ,deterministic=deterministic)
+        hidden_states = self.layer[-1](hidden_states, receivers=receivers, senders=senders, deterministic=deterministic)
 
         outputs = (hidden_states,)
 
