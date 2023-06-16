@@ -2532,11 +2532,6 @@ class FlaxT5GraphForConditionalGeneration(FlaxT5GraphPreTrainedModel):
 
             return lm_logits, decoder_outputs
 
-
-        print("decoder:")
-        print(encdec_receivers)
-        print(encdec_senders)
-        print(receivers)
         outputs = self.module.apply(
             inputs,
             encdec_receivers=encdec_receivers,
