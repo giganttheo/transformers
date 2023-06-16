@@ -106,7 +106,7 @@ def dot_product_attention_weights_graph(query: Array,
     seq_len, heads, depth = query.shape
     query = query / jnp.sqrt(depth).astype(dtype)
     # attn weight shape is (..., sequence_length, num_heads)
-    # print(receivers)
+    print(receivers)
     attn_weights = jnp.einsum('ehd,ehd->eh', query[receivers], key[senders],
                                 precision=precision)
 
