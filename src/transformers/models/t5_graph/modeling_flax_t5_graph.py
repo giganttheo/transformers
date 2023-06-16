@@ -2435,7 +2435,7 @@ class FlaxT5GraphForConditionalGeneration(FlaxT5GraphPreTrainedModel):
 
     @add_start_docstrings(T5_DECODE_INPUTS_DOCSTRING)
     @replace_return_docstrings(output_type=FlaxCausalLMOutputWithCrossAttentions, config_class=T5Config)
-    def decode(
+    def decode( #this one doesnt get the right input TODO
         self,
         decoder_input_ids,
         encoder_outputs,
@@ -2529,9 +2529,7 @@ class FlaxT5GraphForConditionalGeneration(FlaxT5GraphPreTrainedModel):
                 lm_logits = module.lm_head(sequence_output)
 
             return lm_logits, decoder_outputs
-        print("here")
-        print(encdec_receivers)
-        print(self.module)
+
         outputs = self.module.apply(
             inputs,
             encdec_receivers=encdec_receivers,
@@ -2579,6 +2577,8 @@ class FlaxT5GraphForConditionalGeneration(FlaxT5GraphPreTrainedModel):
         max_length,
         receivers,
         senders,
+        encdec_receivers,
+        encdec_senders,
         attention_mask: Optional[jnp.DeviceArray] = None,
         decoder_attention_mask: Optional[jnp.DeviceArray] = None,
         encoder_outputs=None,
@@ -2600,6 +2600,8 @@ class FlaxT5GraphForConditionalGeneration(FlaxT5GraphPreTrainedModel):
         return {
             "receivers": receivers,
             "senders": senders,
+            "encdec_receivers": encdec_receivers,
+            "encdec_senders": encdec_senders,
             "past_key_values": past_key_values,
             "encoder_outputs": encoder_outputs,
             "encoder_attention_mask": attention_mask,
