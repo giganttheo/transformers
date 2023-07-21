@@ -809,7 +809,8 @@ class FlaxT5GraphAttention(nn.Module):
             dropout_rng = self.make_rng("dropout")
 
         # Softmax(QK^T)
-        # print(f"sizes: {receivers, senders}")
+        print(f"lengths: {receivers, senders}")
+        print(f"sizes: {query_states.shape}, {position_bias.shape}")
         #vectorize over batches and heads
         attn_weights = jax.vmap(jax.vmap(lambda query_states, key_states, receivers, senders, position_bias, mask: dot_product_attention_weights_graph(
             query_states,
