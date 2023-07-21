@@ -824,7 +824,7 @@ class FlaxT5GraphAttention(nn.Module):
             deterministic=deterministic,
             dtype=self.dtype,
         ))
-        )(query_states, key_states, receivers, senders, position_bias, mask)
+        )(query_states, key_states, receivers, senders, position_bias, None) #mask is None for now
 
         # multiply with value states
 
