@@ -695,7 +695,6 @@ class FlaxT5GraphAttention(nn.Module):
             attention_mask = combine_masks(pad_mask, attention_mask)
         return key, value, attention_mask
 
-    jax.vmap()#TODO
     def _create_position_bias(
         self, receivers, senders, key_states, query_states, attention_mask, init_cache, seq_length, causal_attention_mask_shift
     ):
