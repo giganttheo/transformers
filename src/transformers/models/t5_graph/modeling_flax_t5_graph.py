@@ -659,6 +659,8 @@ class FlaxT5GraphAttention(nn.Module):
         )
 
         values = self.relative_attention_bias(relative_position_bucket)
+        print(f"values shape: {values.shape}")
+        print(f"values shape: {values[:, heads, :, heads].shape}")
         heads = jnp.arange(self.n_heads)
         return values[:, heads, :, heads] #to take into account that context and memory positions can be head-dependant and batch-dependant
         # values = values.transpose((2, 0, 1))[None, :, :, :]
@@ -808,8 +810,9 @@ class FlaxT5GraphAttention(nn.Module):
                 receivers, senders, key_states, query_states, attention_mask, init_cache, seq_length, causal_attention_mask_shift
             )
 
-            if attention_mask is not None:
-                position_bias = position_bias + attention_mask
+            #TODO
+            # if attention_mask is not None:
+            #     position_bias = position_bias + attention_mask
 
         # # create dropout rng
         # dropout_rng = None
