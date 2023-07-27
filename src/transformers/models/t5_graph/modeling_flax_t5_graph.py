@@ -1748,7 +1748,7 @@ class FlaxT5GraphPreTrainedModel(FlaxPreTrainedModel):
 
         batch_size = input_shape[0]
         input_size = input_shape[1]
-        n_heads = 6
+        n_heads = 12
         senders = jnp.array([[jnp.arange(input_size)] * n_heads]*batch_size)
         receivers = jnp.array([[jnp.arange(input_size)] * n_heads]*batch_size)
         encdec_senders = jnp.array([[jnp.arange(input_size)] * n_heads]*batch_size)
