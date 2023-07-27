@@ -662,8 +662,8 @@ class FlaxT5GraphAttention(nn.Module):
         #[batch, heads6, 1, 1, n_heads]
         print(f"values shape: {values.shape}")
         heads = jnp.arange(self.n_heads)
-        print(f"values shape: {values[:, heads, :, 0, heads].transpose((1, 0, 2, 3)).shape}")
-        return values[:, heads, :, 0, heads].transpose((1, 0, 2, 3)) #to take into account that context and memory positions can be head-dependant and batch-dependant
+        print(f"values_t shape: {values[:, heads, :, 0, heads].transpose((1, 0, 2)).shape}")
+        return values[:, heads, :, 0, heads].transpose((1, 0, 2)) #to take into account that context and memory positions can be head-dependant and batch-dependant
         # values = values.transpose((2, 0, 1))[None, :, :, :]
         # [batch_size, n_heads, n_edges] <==> initially [1, n_heads, seq_len, seq_len]
 
