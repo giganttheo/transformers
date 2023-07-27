@@ -126,21 +126,29 @@ def dot_product_attention_weights_graph(query: Array,
     return attn_weights
 
 #Graph attention
-def dot_product_attention_graph(q, k, v, senders, receivers):
-    seq_len, heads, d_k = k.shape
-    #compute attention logits: <Q,K>
-    attn_logits = jnp.einsum('ehd,ehd->eh', q[receivers], k[senders]) #(num_edges, heads)
-    #softmax over receiver nodes
-    w = segment_softmax(attn_logits,
-                        segment_ids=receivers,
-                        num_segments=seq_len) #(num_edges, heads)
-    #attention weights applied to the values for every edge:
-    values = jnp.einsum('eh,ehd->ehd', w, v[senders]) #(num_edges, heads, d_v)
-    #summing over the nodes
-    values = segment_sum(values,
-                        segment_ids=receivers,
-                        num_segments=seq_len) #(seq_len, heads, d_v)
-    return values
+@partial(jax.vmap, in_axes=(0,0,0,0,0,0)) #vectorize over batches
+@partial(jax.vmap, in_axes=(-2,-2,-2,0,0,0), out_axes=(-2))  #vectorize over heads
+def scaled_dot_product_attention_graph(q, k, v, receivers, senders, bias=None):
+  # if graph_mask == None: #to ignore padded parts of the graph
+  #   graph_mask = (receivers != -1)
+  seq_len, depth = k.shape
+  #compute attention logits: <Q,K> / sqrt(d_q)
+  #depth = q.shape[-1]
+  attn_logits = jnp.einsum('ed, ed -> e', q[receivers] / jnp.sqrt(depth), k[senders]) # (num_edges,)
+  if bias is not None:
+    attn_logits = attn_logits + bias
+  #softmax over receiver nodes
+  w = segment_softmax(attn_logits,
+                      segment_ids=receivers,
+                      num_segments = seq_len) #(num_edges,)
+  #attention weights applied to the values for every edge:
+  # values = jnp.expand_dims(w, -1) * v[senders, :] #(num_edges, d_v)
+  values = jnp.einsum('e,ed->ed', w, v[senders]) #(num_edges, d_v)
+  #summing over the nodes
+  values = segment_sum(values,
+                       segment_ids=receivers,
+                       num_segments=seq_len) #(seq_len, d_v)
+  return values
 
 
 # Copied from transformers.models.bart.modeling_flax_bart.shift_tokens_right
@@ -742,7 +750,7 @@ class FlaxT5GraphAttention(nn.Module):
         key_states = self.k(hidden_states) if key_value_states is None else self.k(key_value_states)
         value_states = self.v(hidden_states) if key_value_states is None else self.v(key_value_states)
 
-        # reshape to (batch_size, seq_length, n_heads, head_dim)
+        # reshape to (batch_size, seq_length, n_heads, head_dim) #? TODO explain this
         query_states = self._split_heads(query_states)
         key_states = self._split_heads(key_states)
         value_states = self._split_heads(value_states)
@@ -803,29 +811,30 @@ class FlaxT5GraphAttention(nn.Module):
             if attention_mask is not None:
                 position_bias = position_bias + attention_mask
 
-        # create dropout rng
-        dropout_rng = None
-        if not deterministic and self.dropout > 0.0:
-            dropout_rng = self.make_rng("dropout")
+        # # create dropout rng
+        # dropout_rng = None
+        # if not deterministic and self.dropout > 0.0:
+        #     dropout_rng = self.make_rng("dropout")
 
-        # Softmax(QK^T)
-        print(f"lengths: {receivers, senders}")
-        print(f"sizes: {query_states.shape}, {position_bias.shape}")
-        #vectorize over batches and heads
-        attn_weights = jax.vmap(jax.vmap(lambda query_states, key_states, receivers, senders, position_bias, mask: dot_product_attention_weights_graph(
-            query_states,
-            key_states,
-            receivers,
-            senders,
-            bias=position_bias,
-            mask=mask,
-            dropout_rng=dropout_rng,
-            dropout_rate=self.dropout,
-            broadcast_dropout=True,
-            deterministic=deterministic,
-            dtype=self.dtype,
-        ))
-        )(query_states, key_states, receivers, senders, position_bias, None) #mask is None for now
+        # # Softmax(QK^T)
+        # print(f"lengths: {receivers, senders}")
+        # print(f"sizes: {query_states.shape}, {position_bias.shape}")
+        # #vectorize over batches and heads ==> /!\ query_states and key_states are not shaped correctly,
+        # # and receivers and senders are not batched at all
+        # attn_weights = jax.vmap(jax.vmap(lambda query_states, key_states, receivers, senders, position_bias, mask: dot_product_attention_weights_graph(
+        #     query_states,
+        #     key_states,
+        #     receivers,
+        #     senders,
+        #     bias=position_bias,
+        #     mask=mask,
+        #     dropout_rng=dropout_rng,
+        #     dropout_rate=self.dropout,
+        #     broadcast_dropout=True,
+        #     deterministic=deterministic,
+        #     dtype=self.dtype,
+        # ))
+        # )(query_states, key_states, receivers, senders, position_bias, None) #mask is None for now
 
         # multiply with value states
 
@@ -835,16 +844,18 @@ class FlaxT5GraphAttention(nn.Module):
 
         # print(attn_weights.shape, value_states.shape, receivers.shape, senders.shape)
 
-        @jax.vmap #over batches
-        def get_attn_output(attn_weights, value_states, receivers, senders):
-            values = jnp.einsum('eh,ehd->ehd', attn_weights, value_states[senders]) #(num_edges, heads, d_v)
-            #summing over the nodes
-            attn_output = segment_sum(values,
-                                segment_ids=receivers,
-                                num_segments=seq_length) #(seq_len, heads, d_v)
-            return attn_output
+        # @jax.vmap #over batches
+        # def get_attn_output(attn_weights, value_states, receivers, senders):
+        #     values = jnp.einsum('eh,ehd->ehd', attn_weights, value_states[senders]) #(num_edges, heads, d_v)
+        #     #summing over the nodes
+        #     attn_output = segment_sum(values,
+        #                         segment_ids=receivers,
+        #                         num_segments=seq_length) #(seq_len, heads, d_v)
+        #     return attn_output
 
-        attn_output = get_attn_output(attn_weights, value_states, receivers, senders)
+        # attn_output = get_attn_output(attn_weights, value_states, receivers, senders)
+
+        attn_output, attn_weights = scaled_dot_product_attention_graph(query_states, key_states, value_states, receivers, senders, position_bias)
 
         # bring back to (batch_size, seq_length, d_model)
         attn_output = self._merge_heads(attn_output)
