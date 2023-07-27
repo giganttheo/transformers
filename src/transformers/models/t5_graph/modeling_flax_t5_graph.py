@@ -716,7 +716,7 @@ class FlaxT5GraphAttention(nn.Module):
         if self.has_relative_attention_bias:
             position_bias = self.compute_bias(receivers, senders, query_length, key_length)
         else:
-            position_bias = jnp.zeros(key_states.shape[:3], dtype=self.dtype)
+            position_bias = jnp.zeros(receivers.shape, dtype=self.dtype)
         # elif attention_mask is not None:
         #     position_bias = jnp.zeros_like(attention_mask)
         # else:
