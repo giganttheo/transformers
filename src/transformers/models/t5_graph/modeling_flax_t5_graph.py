@@ -148,7 +148,7 @@ def scaled_dot_product_attention_graph(q, k, v, receivers, senders, bias=None):
   values = segment_sum(values,
                        segment_ids=receivers,
                        num_segments=seq_len) #(seq_len, d_v)
-  return values
+  return values, w
 
 
 # Copied from transformers.models.bart.modeling_flax_bart.shift_tokens_right
