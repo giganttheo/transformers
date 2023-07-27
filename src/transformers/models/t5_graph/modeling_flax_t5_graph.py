@@ -648,7 +648,7 @@ class FlaxT5GraphAttention(nn.Module):
         """Compute binned relative position bias"""
         #TO CHANGE ==> compute only the bias for existing receivers and senders
         context_position = jnp.arange(query_length, dtype="i4")[:, None]
-        memory_position = jnp.arange(key_length, dtype="i4")[None, :]
+        memory_position = jnp.arange(key_length, dtype="i4")[:, None] #changed
 
         relative_position = memory_position[receivers] - context_position[senders] #TODO this or inverse?
         relative_position_bucket = self._relative_position_bucket( #this is vectorized over batches + heads already
@@ -659,6 +659,7 @@ class FlaxT5GraphAttention(nn.Module):
         )
 
         values = self.relative_attention_bias(relative_position_bucket)
+        #[batch, heads6, 1, 1, n_heads]
         print(f"values shape: {values.shape}")
         heads = jnp.arange(self.n_heads)
         print(f"values shape: {values[:, heads, :, heads].shape}")
