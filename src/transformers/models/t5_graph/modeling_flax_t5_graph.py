@@ -715,10 +715,12 @@ class FlaxT5GraphAttention(nn.Module):
 
         if self.has_relative_attention_bias:
             position_bias = self.compute_bias(receivers, senders, query_length, key_length)
-        elif attention_mask is not None:
-            position_bias = jnp.zeros_like(attention_mask)
         else:
-            position_bias = jnp.zeros((1, self.n_heads, receivers.shape[0]), dtype=self.dtype)
+            position_bias = jnp.zeros(key_states.shape[:3], dtype=self.dtype)
+        # elif attention_mask is not None:
+        #     position_bias = jnp.zeros_like(attention_mask)
+        # else:
+        #     position_bias = jnp.zeros((1, self.n_heads, receivers.shape[0]), dtype=self.dtype)
 
         # if key and values are already calculated, only the last query position bias should be taken
         if cache_is_filled:
