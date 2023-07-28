@@ -1867,18 +1867,30 @@ class FlaxT5GraphPreTrainedModel(FlaxPreTrainedModel):
         # init input variables to retrieve cache
         decoder_input_ids = jnp.ones((batch_size, max_length), dtype="i4")
         decoder_attention_mask = jnp.ones_like(decoder_input_ids)
-        receivers=[]
-        senders=[]
-        #fully connected adj list
-        for i in range(max_length):
-            for j in range(max_length):
+        max_source_length=512#16384
+        max_target_length=64#512
+        window_size = 100
+        senders = []
+        receivers = []
+        encdec_receivers = []
+        encdec_senders = []
+
+        #fully connected adjacency list
+        for i in range(max_source_length):
+            for j in range(max(0, i - window_size//2), min(max_source_length, i + window_size%2 + window_size//2)):
                 senders.append(i)
                 receivers.append(j)
-        
-        receivers = jnp.array([[receivers]*12]*batch_size)
-        senders = jnp.array([[senders]*12]*batch_size)
+            for j in range(max(0, i - window_size//2), min(max_target_length, i + window_size%2 + window_size//2)):
+                encdec_senders.append(j)
+                encdec_receivers.append(i)
 
-        print(f"shape in init_cache: {receivers.shape}")
+        receivers = jnp.array([[receivers] * n_heads] * model_inputs["input_ids"].shape[0])
+        senders = jnp.array([[senders] * n_heads] * model_inputs["input_ids"].shape[0])
+        encdec_receivers = jnp.array([[encdec_receivers] * n_heads] * model_inputs["input_ids"].shape[0])
+        encdec_senders = jnp.array([[encdec_senders] * n_heads] * model_inputs["input_ids"].shape[0])
+
+
+        print(f"shape in init_cache: {encdec_receivers.shape}")
 
         def _decoder_forward(module, decoder_input_ids, decoder_attention_mask, **kwargs):
             decoder_module = module._get_decoder_module()
@@ -1892,8 +1904,8 @@ class FlaxT5GraphPreTrainedModel(FlaxPreTrainedModel):
             jax.random.PRNGKey(0),
             decoder_input_ids=decoder_input_ids,
             decoder_attention_mask=decoder_attention_mask,
-            receivers=receivers,
-            senders=senders,
+            receivers=encdec_receivers,
+            senders=encdec_senders,
             encoder_hidden_states=encoder_outputs[0],
             init_cache=True,
             method=_decoder_forward,  # we only need to call the decoder to init the cache
