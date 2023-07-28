@@ -748,6 +748,7 @@ class FlaxT5GraphAttention(nn.Module):
         """
         Self-attention (if key_value_states is None) or attention over source sentence (provided by key_value_states).
         """
+
         batch_size, seq_length = hidden_states.shape[:2]
 
         # q, k, v projections
@@ -762,6 +763,8 @@ class FlaxT5GraphAttention(nn.Module):
 
         # counter-act scaling in dot_product_attention_weights function
         query_states *= jnp.sqrt(query_states.shape[-1])
+
+        print(f"Shape of inputs: r: {receivers.shape}, q: {query_states.shape}")
 
         # for fast decoding causal attention mask should be shifted
         causal_attention_mask_shift = (
