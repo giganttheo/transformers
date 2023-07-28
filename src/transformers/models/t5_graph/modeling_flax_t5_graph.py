@@ -1884,10 +1884,11 @@ class FlaxT5GraphPreTrainedModel(FlaxPreTrainedModel):
                 encdec_senders.append(j)
                 encdec_receivers.append(i)
 
-        receivers = jnp.array([[receivers] * n_heads] * model_inputs["input_ids"].shape[0])
-        senders = jnp.array([[senders] * n_heads] * model_inputs["input_ids"].shape[0])
-        encdec_receivers = jnp.array([[encdec_receivers] * n_heads] * model_inputs["input_ids"].shape[0])
-        encdec_senders = jnp.array([[encdec_senders] * n_heads] * model_inputs["input_ids"].shape[0])
+        n_heads=12
+        receivers = jnp.array([[receivers] * n_heads] * batch_size)
+        senders = jnp.array([[senders] * n_heads] * batch_size)
+        encdec_receivers = jnp.array([[encdec_receivers] * n_heads] * batch_size)
+        encdec_senders = jnp.array([[encdec_senders] * n_heads] * batch_size)
 
 
         print(f"shape in init_cache: {encdec_receivers.shape}")
