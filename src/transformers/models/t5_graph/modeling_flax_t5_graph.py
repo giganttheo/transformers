@@ -764,7 +764,7 @@ class FlaxT5GraphAttention(nn.Module):
         # counter-act scaling in dot_product_attention_weights function
         query_states *= jnp.sqrt(query_states.shape[-1])
 
-        print(f"Shape of inputs: r: {receivers.shape}, q: {query_states.shape}")
+        print(f"Shape of receivers: r: {receivers.shape}, query_states q: {query_states.shape}, hidden_states h: {hidden_states.shape}, kv: {key_value_states.shape if key_value_states is not None else None}")
 
         # for fast decoding causal attention mask should be shifted
         causal_attention_mask_shift = (
