@@ -1244,6 +1244,7 @@ class FlaxT5LayerCollection(nn.Module):
         deterministic=True,
         init_cache=False,
     ):
+        print(f"shape in FlaxT5Layer: {receivers.shape}")
         return self.layer(
             hidden_states,
             receivers=receivers,
@@ -1401,7 +1402,7 @@ class FlaxT5BlockCollection(nn.Module):
         for i, layer_module in enumerate(self.blocks):
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
-
+            print(f"shape in block collection: {receivers.shape}")
             layer_outputs = layer_module(
                 hidden_states,
                 receivers,
@@ -1546,7 +1547,7 @@ class FlaxT5Stack(nn.Module):
     ):
         hidden_states = self.embed_tokens(input_ids)
         hidden_states = self.dropout(hidden_states, deterministic=deterministic)
-
+        print(f"shape in t5stack: {receivers.shape}")
         outputs = self.block(
             hidden_states,
             receivers=receivers,
