@@ -1865,10 +1865,11 @@ class FlaxT5GraphPreTrainedModel(FlaxPreTrainedModel):
                 cross-attention of the decoder.
         """
         # init input variables to retrieve cache
-        decoder_input_ids = jnp.ones((batch_size, max_length), dtype="i4")
-        decoder_attention_mask = jnp.ones_like(decoder_input_ids)
         max_source_length=512#16384
         max_target_length=64#512
+        decoder_input_ids = jnp.ones((batch_size, max_target_length), dtype="i4")
+        print(f"shapes of init: {(batch_size, max_length)}")
+        decoder_attention_mask = jnp.ones_like(decoder_input_ids)
         window_size = 100
         senders = []
         receivers = []
