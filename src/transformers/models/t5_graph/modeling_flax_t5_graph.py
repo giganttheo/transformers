@@ -2183,7 +2183,7 @@ class FlaxT5GraphModule(nn.Module):
             return_dict=return_dict,
             deterministic=deterministic,
         )
-
+        print(f"shapes in module: {receivers.shape}, {encdec_receivers.shape}")
         # Decode
         decoder_outputs = self.decoder(
             input_ids=decoder_input_ids,
@@ -2420,6 +2420,8 @@ class FlaxT5GraphForConditionalGenerationModule(nn.Module):
         )
 
         hidden_states = encoder_outputs[0]
+
+        print(f"shapes in conditional generation model: {receivers.shape}, {encdec_receivers.shape}")
 
         # Decode
         decoder_outputs = self.decoder(
