@@ -131,7 +131,7 @@ def dot_product_attention_weights_graph(query: Array,
 def scaled_dot_product_attention_graph(q, k, v, receivers, senders, bias=None):
   # if graph_mask == None: #to ignore padded parts of the graph
   #   graph_mask = (receivers != -1)
-  seq_len, depth = k.shape
+  seq_len, depth = q.shape
   #compute attention logits: <Q,K> / sqrt(d_q)
   #depth = q.shape[-1]
   attn_logits = jnp.einsum('ed, ed -> e', q[receivers] / jnp.sqrt(depth), k[senders]) # (num_edges,)
