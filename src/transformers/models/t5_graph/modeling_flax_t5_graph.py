@@ -475,7 +475,7 @@ class FlaxT5Attention(nn.Module):
             self.variables["cache"]["cache_index"] if (self.has_variable("cache", "cached_key") and self.causal) else 0
         )
         # create causal attention_mask; attention_mask has to be defined when model is causal
-        if self.causal:
+        if False:#self.causal: TODO change causal
             causal_attention_mask = make_causal_mask(attention_mask, dtype="bool")
 
             # fast decoding for generate requires special attention_mask
