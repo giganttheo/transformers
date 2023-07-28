@@ -1875,8 +1875,10 @@ class FlaxT5GraphPreTrainedModel(FlaxPreTrainedModel):
                 senders.append(i)
                 receivers.append(j)
         
-        receivers = jnp.array([receivers]*batch_size)
-        senders = jnp.array([senders]*batch_size)
+        receivers = jnp.array([[receivers]*12]*batch_size)
+        senders = jnp.array([[senders]*12]*batch_size)
+
+        print(f"shape in init_cache: {receivers.shape}")
 
         def _decoder_forward(module, decoder_input_ids, decoder_attention_mask, **kwargs):
             decoder_module = module._get_decoder_module()
