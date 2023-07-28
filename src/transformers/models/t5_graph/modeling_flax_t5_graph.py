@@ -979,7 +979,7 @@ class FlaxT5GraphLayerCrossAttention(nn.Module):
         output_attentions=False,
         deterministic=True,
     ):
-        print(f"shapes in encdec attention: {receivers.shape}")
+        print(f"shape of adj_list in encdec attention: {receivers.shape}")
         normed_hidden_states = self.layer_norm(hidden_states)
         attention_output = self.EncDecAttention(
             normed_hidden_states,
@@ -1154,7 +1154,7 @@ class FlaxT5Block(nn.Module):
 
         do_cross_attention = self.causal and encoder_hidden_states is not None
         if do_cross_attention:
-            # print(receivers, senders)
+            print(f"shape in FlaxBlock: {receivers.shape}")
             cross_attention_outputs = self.layer[1](
                 hidden_states,
                 receivers=receivers,
