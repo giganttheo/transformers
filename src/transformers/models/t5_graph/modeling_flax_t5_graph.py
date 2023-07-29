@@ -520,8 +520,8 @@ class FlaxT5Attention(nn.Module):
                 key_states, query_states, attention_mask, init_cache, seq_length, causal_attention_mask_shift
             )
 
-            if attention_mask is not None:
-                position_bias = position_bias + attention_mask
+            # if attention_mask is not None:
+            #     position_bias = position_bias + attention_mask
 
         # create dropout rng
         dropout_rng = None
