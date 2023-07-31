@@ -1676,7 +1676,7 @@ class FlaxT5ForConditionalGeneration(FlaxT5PreTrainedModel):
         if dropout_rng is not None:
             rngs["dropout"] = dropout_rng
 
-        print(graph)
+        print(f"graph: {graph}")
 
         if graph is None:
             inputs = {"params": params or self.params}
