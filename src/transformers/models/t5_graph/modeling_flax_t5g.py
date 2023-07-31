@@ -178,12 +178,18 @@ class FlaxT5LayerFF(nn.Module):
         return hidden_states
 
 
+class GraphAttentionPattern():
+    def __init__(self, receivers=[-2], senders=[-1], mask=[100]):
+        self.receivers=jnp.array(receivers)
+        self.senders=jnp.array(senders)
+        self.mask=jnp.array(mask)
+
 class FlaxT5Attention(nn.Module):
     config: T5Config
     has_relative_attention_bias: bool = False
     causal: bool = False
     dtype: jnp.dtype = jnp.float32  # the dtype of the computation
-    graph: dict = field(default_factory={"receivers": jnp.array([-1]), "senders": jnp.array([-2])})
+    graph: GraphAttentionPattern
 
     def setup(self):
         self.relative_attention_num_buckets = self.config.relative_attention_num_buckets
