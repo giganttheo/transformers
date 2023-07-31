@@ -368,8 +368,10 @@ class FlaxT5Attention(nn.Module):
         """
         batch_size, seq_length = hidden_states.shape[:2]
 
-        if "graph" in self.variables.keys():
+        if self.has_variable("graph"):
             print(self.variables["graph"])
+        else:
+            print('nope')
 
         # q, k, v projections
         query_states = self.q(hidden_states)  # (batch_size, n_heads, seq_length, dim_per_head)
