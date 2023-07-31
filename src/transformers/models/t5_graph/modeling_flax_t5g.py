@@ -368,7 +368,7 @@ class FlaxT5Attention(nn.Module):
         """
         batch_size, seq_length = hidden_states.shape[:2]
 
-        if self.has_variable("graph"):
+        if self.has_variable("graph", "receivers"):
             print(self.variables["graph"])
         else:
             print('nope')
