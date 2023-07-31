@@ -370,7 +370,7 @@ class FlaxT5Attention(nn.Module):
         batch_size, seq_length = hidden_states.shape[:2]
 
         print(self.config)
-        print(self.__name__)
+        # print(self.__name__)
         print(self.params)
 
         # q, k, v projections
