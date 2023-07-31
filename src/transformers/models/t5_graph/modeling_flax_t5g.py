@@ -189,7 +189,7 @@ class FlaxT5Attention(nn.Module):
     has_relative_attention_bias: bool = False
     causal: bool = False
     dtype: jnp.dtype = jnp.float32  # the dtype of the computation
-    graph: GraphAttentionPattern
+    graph: GraphAttentionPattern=GraphAttentionPattern()
 
     def setup(self):
         self.relative_attention_num_buckets = self.config.relative_attention_num_buckets
