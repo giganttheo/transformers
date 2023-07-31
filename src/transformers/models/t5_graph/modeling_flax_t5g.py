@@ -178,18 +178,18 @@ class FlaxT5LayerFF(nn.Module):
         return hidden_states
 
 
-class GraphAttentionPattern():
-    def __init__(self, receivers=[-2], senders=[-1], mask=[100]):
-        self.receivers=jnp.array(receivers)
-        self.senders=jnp.array(senders)
-        self.mask=jnp.array(mask)
+# class GraphAttentionPattern():
+#     def __init__(self, receivers=[-2], senders=[-1], mask=[100]):
+#         self.receivers=jnp.array(receivers)
+#         self.senders=jnp.array(senders)
+#         self.mask=jnp.array(mask)
 
 class FlaxT5Attention(nn.Module):
     config: T5Config
     has_relative_attention_bias: bool = False
     causal: bool = False
     dtype: jnp.dtype = jnp.float32  # the dtype of the computation
-    graph: GraphAttentionPattern=GraphAttentionPattern()
+    # graph: GraphAttentionPattern=GraphAttentionPattern()
 
     def setup(self):
         self.relative_attention_num_buckets = self.config.relative_attention_num_buckets
@@ -368,6 +368,10 @@ class FlaxT5Attention(nn.Module):
         Self-attention (if key_value_states is None) or attention over source sentence (provided by key_value_states).
         """
         batch_size, seq_length = hidden_states.shape[:2]
+
+        print(self.config)
+        print(self.__name__)
+        print(self.params)
 
         # q, k, v projections
         query_states = self.q(hidden_states)  # (batch_size, n_heads, seq_length, dim_per_head)
