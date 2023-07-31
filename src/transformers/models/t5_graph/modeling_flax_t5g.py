@@ -180,10 +180,10 @@ class FlaxT5LayerFF(nn.Module):
 
 class FlaxT5Attention(nn.Module):
     config: T5Config
-    graph: dict = field(default_factory={"receivers": jnp.array([-1]), "senders": jnp.array([-2])})
     has_relative_attention_bias: bool = False
     causal: bool = False
     dtype: jnp.dtype = jnp.float32  # the dtype of the computation
+    graph: dict = field(default_factory={"receivers": jnp.array([-1]), "senders": jnp.array([-2])})
 
     def setup(self):
         self.relative_attention_num_buckets = self.config.relative_attention_num_buckets
