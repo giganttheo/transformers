@@ -84,6 +84,12 @@ else:
         "FlaxT5GraphModel",
         "FlaxT5GraphPreTrainedModel",
     ]
+    _import_structure["modeling_flax_t5g"] = [ #TODO tmp
+        "FlaxT5EncoderModel",
+        "FlaxT5ForConditionalGeneration",
+        "FlaxT5Model",
+        "FlaxT5PreTrainedModel",
+    ]
 
 
 if TYPE_CHECKING:
