@@ -16,6 +16,7 @@
 
 
 import copy
+from dataclasses import field
 from typing import Callable, Optional, Tuple
 
 import flax.linen as nn
@@ -178,7 +179,7 @@ class FlaxT5LayerFF(nn.Module):
 
 
 class FlaxT5Attention(nn.Module):
-    graph: dict = {"receivers": jnp.array([-1]), "senders": jnp.array([-2])}
+    graph: dict = field(default_factory={"receivers": jnp.array([-1]), "senders": jnp.array([-2])})
     config: T5Config
     has_relative_attention_bias: bool = False
     causal: bool = False
