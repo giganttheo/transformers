@@ -191,10 +191,6 @@ class FlaxT5Attention(nn.Module):
     dtype: jnp.dtype = jnp.float32  # the dtype of the computation
 
     def setup(self):
-
-        #cached_key = self.variable("cache", "cached_key", jnp.zeros, key.shape, key.dtype)
-        self.variable('graph', 'receivers', jnp.zeros, (1,), jnp.int32)
-
         self.relative_attention_num_buckets = self.config.relative_attention_num_buckets
         self.relative_attention_max_distance = self.config.relative_attention_max_distance
         self.d_model = self.config.d_model
@@ -371,11 +367,6 @@ class FlaxT5Attention(nn.Module):
         Self-attention (if key_value_states is None) or attention over source sentence (provided by key_value_states).
         """
         batch_size, seq_length = hidden_states.shape[:2]
-        print(f"keys of variables: {self.variables.keys()}")
-        if self.has_variable("graph", "receivers"):
-            print(self.variables["graph"])
-        elif "graph" in self.variables.keys():
-            print(f'graph in attn: {self.variables["graph"]}')
 
         # q, k, v projections
         query_states = self.q(hidden_states)  # (batch_size, n_heads, seq_length, dim_per_head)
@@ -1097,7 +1088,6 @@ class FlaxT5PreTrainedModel(FlaxPreTrainedModel):
         train: bool = False,
         params: dict = None,
         dropout_rng: PRNGKey = None,
-        graph: dict=None,
     ):
         r"""
         Returns:
@@ -1133,7 +1123,7 @@ class FlaxT5PreTrainedModel(FlaxPreTrainedModel):
             return encode_module(input_ids, attention_mask, **kwargs)
 
         return self.module.apply(
-            {"params": params or self.params, "graph": graph},
+            {"params": params or self.params},
             input_ids=jnp.array(input_ids, dtype="i4"),
             attention_mask=jnp.array(attention_mask, dtype="i4"),
             output_attentions=output_attentions,
@@ -1159,7 +1149,6 @@ class FlaxT5PreTrainedModel(FlaxPreTrainedModel):
         train: bool = False,
         params: dict = None,
         dropout_rng: PRNGKey = None,
-        graph: dict=None,
     ):
         r"""
         Returns:
@@ -1204,7 +1193,7 @@ class FlaxT5PreTrainedModel(FlaxPreTrainedModel):
         if dropout_rng is not None:
             rngs["dropout"] = dropout_rng
 
-        inputs = {"params": params or self.params, "graph": graph}
+        inputs = {"params": params or self.params}
 
         # if past_key_values are passed then cache is already initialized a private flag init_cache has to be
         # passed down to ensure cache is used. It has to be made sure that cache is marked as mutable so that
@@ -1569,7 +1558,6 @@ class FlaxT5ForConditionalGenerationModule(nn.Module):
         deterministic: bool = True,
     ):
         
-        # print(f'graph in module: {self.variables["graph"]}')
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         # Encode
@@ -1641,7 +1629,6 @@ class FlaxT5ForConditionalGeneration(FlaxT5PreTrainedModel):
         return_dict: Optional[bool] = None,
         train: bool = False,
         params: dict = None,
-        graph: dict = None,
         dropout_rng: PRNGKey = None,
     ):
         r"""
@@ -1686,13 +1673,8 @@ class FlaxT5ForConditionalGeneration(FlaxT5PreTrainedModel):
         if dropout_rng is not None:
             rngs["dropout"] = dropout_rng
 
-        if graph is None:
-            inputs = {"params": params or self.params}
-        else:
-            inputs = {"params": params or self.params, "graph": graph}
+        inputs = {"params": params or self.params}
 
-        print(f"graph in t5 for cg: {graph}")
-        print(f"{inputs.keys()}")
         # if past_key_values are passed then cache is already initialized a private flag init_cache has to be
         # passed down to ensure cache is used. It has to be made sure that cache is marked as mutable so that
         # it can be changed by FlaxT5Attention module
@@ -1771,7 +1753,6 @@ class FlaxT5ForConditionalGeneration(FlaxT5PreTrainedModel):
         attention_mask: Optional[jnp.DeviceArray] = None,
         decoder_attention_mask: Optional[jnp.DeviceArray] = None,
         encoder_outputs=None,
-        graph: dict=None,
         **kwargs,
     ):
         # initializing the cache
@@ -1792,7 +1773,6 @@ class FlaxT5ForConditionalGeneration(FlaxT5PreTrainedModel):
             "encoder_outputs": encoder_outputs,
             "encoder_attention_mask": attention_mask,
             "decoder_attention_mask": extended_attention_mask,
-            "graph": graph, #TODO ?
         }
 
     def update_inputs_for_generation(self, model_outputs, model_kwargs):
