@@ -1761,6 +1761,7 @@ class FlaxT5ForConditionalGeneration(FlaxT5PreTrainedModel):
         attention_mask: Optional[jnp.DeviceArray] = None,
         decoder_attention_mask: Optional[jnp.DeviceArray] = None,
         encoder_outputs=None,
+        graph=None,
         **kwargs,
     ):
         # initializing the cache
@@ -1781,6 +1782,7 @@ class FlaxT5ForConditionalGeneration(FlaxT5PreTrainedModel):
             "encoder_outputs": encoder_outputs,
             "encoder_attention_mask": attention_mask,
             "decoder_attention_mask": extended_attention_mask,
+            "graph": graph, #TODO ?
         }
 
     def update_inputs_for_generation(self, model_outputs, model_kwargs):
