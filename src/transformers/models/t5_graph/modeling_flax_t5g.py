@@ -1154,6 +1154,7 @@ class FlaxT5PreTrainedModel(FlaxPreTrainedModel):
         train: bool = False,
         params: dict = None,
         dropout_rng: PRNGKey = None,
+        graph: dict = None,
     ):
         r"""
         Returns:
@@ -1177,6 +1178,9 @@ class FlaxT5PreTrainedModel(FlaxPreTrainedModel):
         >>> outputs = model.decode(decoder_input_ids, encoder_outputs)
         >>> logits = outputs.logits
         ```"""
+
+        print(f"graph in decoder: {graph}")
+
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -1761,7 +1765,6 @@ class FlaxT5ForConditionalGeneration(FlaxT5PreTrainedModel):
         attention_mask: Optional[jnp.DeviceArray] = None,
         decoder_attention_mask: Optional[jnp.DeviceArray] = None,
         encoder_outputs=None,
-        graph=None,
         **kwargs,
     ):
         # initializing the cache
@@ -1782,7 +1785,7 @@ class FlaxT5ForConditionalGeneration(FlaxT5PreTrainedModel):
             "encoder_outputs": encoder_outputs,
             "encoder_attention_mask": attention_mask,
             "decoder_attention_mask": extended_attention_mask,
-            "graph": graph, #TODO ?
+            # "graph": graph, #TODO ?
         }
 
     def update_inputs_for_generation(self, model_outputs, model_kwargs):
