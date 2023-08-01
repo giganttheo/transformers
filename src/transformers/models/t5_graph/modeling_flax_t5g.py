@@ -1008,7 +1008,6 @@ class FlaxT5PreTrainedModel(FlaxPreTrainedModel):
         train: bool = False,
         params: dict = None,
         dropout_rng: PRNGKey = None,
-        graph: dict = None,
     ):
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1033,10 +1032,8 @@ class FlaxT5PreTrainedModel(FlaxPreTrainedModel):
         # Handle any PRNG if needed
         rngs = {"dropout": dropout_rng} if dropout_rng is not None else {}
 
-        print(f"Graph in pretrained model: {graph}")
-
         return self.module.apply(
-            {"params": params or self.params, "graph": graph},
+            {"params": params or self.params},
             input_ids=jnp.array(input_ids, dtype="i4"),
             attention_mask=jnp.array(attention_mask, dtype="i4"),
             decoder_input_ids=jnp.array(decoder_input_ids, dtype="i4"),
@@ -1157,7 +1154,6 @@ class FlaxT5PreTrainedModel(FlaxPreTrainedModel):
         train: bool = False,
         params: dict = None,
         dropout_rng: PRNGKey = None,
-        graph: dict = None,
     ):
         r"""
         Returns:
@@ -1181,8 +1177,6 @@ class FlaxT5PreTrainedModel(FlaxPreTrainedModel):
         >>> outputs = model.decode(decoder_input_ids, encoder_outputs)
         >>> logits = outputs.logits
         ```"""
-
-        print(f"graph in decoder: {graph}")
 
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1343,7 +1337,11 @@ class FlaxT5Module(nn.Module):
         output_hidden_states=None,
         return_dict=None,
         deterministic: bool = True,
+        graph: dict = None,
     ):
+        
+        print(f"graph in flaxT5Module: {graph}")
+
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         # Encode if needed (training, first prediction pass)
@@ -1686,7 +1684,7 @@ class FlaxT5ForConditionalGeneration(FlaxT5PreTrainedModel):
         if dropout_rng is not None:
             rngs["dropout"] = dropout_rng
 
-        print(f"graph: {graph}")
+        print(f"graph in t5 for cg: {graph}")
 
         if graph is None:
             inputs = {"params": params or self.params}
@@ -1775,6 +1773,8 @@ class FlaxT5ForConditionalGeneration(FlaxT5PreTrainedModel):
     ):
         # initializing the cache
         batch_size, seq_length = decoder_input_ids.shape
+
+        print(f"kwargs: {kwargs}")
 
         past_key_values = self.init_cache(batch_size, max_length, encoder_outputs)
         # Note that usually one would have to put 0's in the attention_mask for x > input_ids.shape[-1] and x < cache_length.
