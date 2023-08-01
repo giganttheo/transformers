@@ -367,7 +367,7 @@ class FlaxT5Attention(nn.Module):
         Self-attention (if key_value_states is None) or attention over source sentence (provided by key_value_states).
         """
         batch_size, seq_length = hidden_states.shape[:2]
-
+        print(f"keys of variables: {self.variables.keys()}")
         if self.has_variable("graph", "receivers"):
             print(self.variables["graph"])
         elif "graph" in self.variables.keys():
@@ -1684,13 +1684,13 @@ class FlaxT5ForConditionalGeneration(FlaxT5PreTrainedModel):
         if dropout_rng is not None:
             rngs["dropout"] = dropout_rng
 
-        print(f"graph in t5 for cg: {graph}")
-
         if graph is None:
             inputs = {"params": params or self.params}
         else:
             inputs = {"params": params or self.params, "graph": graph}
 
+        print(f"graph in t5 for cg: {graph}")
+        print(f"{inputs.keys()}")
         # if past_key_values are passed then cache is already initialized a private flag init_cache has to be
         # passed down to ensure cache is used. It has to be made sure that cache is marked as mutable so that
         # it can be changed by FlaxT5Attention module
