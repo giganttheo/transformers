@@ -1563,7 +1563,10 @@ class FlaxT5ForConditionalGenerationModule(nn.Module):
         output_hidden_states=None,
         return_dict=None,
         deterministic: bool = True,
+        graph: dict = None,
     ):
+        
+        print(f"graph in module: {graph}")
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         # Encode
@@ -1588,6 +1591,7 @@ class FlaxT5ForConditionalGenerationModule(nn.Module):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
             deterministic=deterministic,
+            graph=graph,
         )
 
         sequence_output = decoder_outputs[0]
