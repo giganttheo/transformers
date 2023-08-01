@@ -191,6 +191,10 @@ class FlaxT5Attention(nn.Module):
     dtype: jnp.dtype = jnp.float32  # the dtype of the computation
 
     def setup(self):
+
+        #cached_key = self.variable("cache", "cached_key", jnp.zeros, key.shape, key.dtype)
+        self.variable('graph', 'receivers', jnp.zeros, (1,), jnp.int32)
+
         self.relative_attention_num_buckets = self.config.relative_attention_num_buckets
         self.relative_attention_max_distance = self.config.relative_attention_max_distance
         self.d_model = self.config.d_model
@@ -372,8 +376,6 @@ class FlaxT5Attention(nn.Module):
             print(self.variables["graph"])
         elif "graph" in self.variables.keys():
             print(f'graph in attn: {self.variables["graph"]}')
-        else:
-            print('nope')
 
         # q, k, v projections
         query_states = self.q(hidden_states)  # (batch_size, n_heads, seq_length, dim_per_head)
