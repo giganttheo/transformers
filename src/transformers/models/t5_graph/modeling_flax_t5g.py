@@ -1567,7 +1567,7 @@ class FlaxT5ForConditionalGenerationModule(nn.Module):
         deterministic: bool = True,
     ):
         
-        print(f'graph in module: {self.variables["graph"]}')
+        # print(f'graph in module: {self.variables["graph"]}')
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         # Encode
