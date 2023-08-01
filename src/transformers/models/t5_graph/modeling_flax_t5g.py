@@ -1093,6 +1093,7 @@ class FlaxT5PreTrainedModel(FlaxPreTrainedModel):
         train: bool = False,
         params: dict = None,
         dropout_rng: PRNGKey = None,
+        graph: dict=None,
     ):
         r"""
         Returns:
@@ -1128,7 +1129,7 @@ class FlaxT5PreTrainedModel(FlaxPreTrainedModel):
             return encode_module(input_ids, attention_mask, **kwargs)
 
         return self.module.apply(
-            {"params": params or self.params},
+            {"params": params or self.params, "graph": graph},
             input_ids=jnp.array(input_ids, dtype="i4"),
             attention_mask=jnp.array(attention_mask, dtype="i4"),
             output_attentions=output_attentions,
@@ -1154,6 +1155,7 @@ class FlaxT5PreTrainedModel(FlaxPreTrainedModel):
         train: bool = False,
         params: dict = None,
         dropout_rng: PRNGKey = None,
+        graph: dict=None,
     ):
         r"""
         Returns:
@@ -1198,7 +1200,7 @@ class FlaxT5PreTrainedModel(FlaxPreTrainedModel):
         if dropout_rng is not None:
             rngs["dropout"] = dropout_rng
 
-        inputs = {"params": params or self.params}
+        inputs = {"params": params or self.params, "graph":graph}
 
         # if past_key_values are passed then cache is already initialized a private flag init_cache has to be
         # passed down to ensure cache is used. It has to be made sure that cache is marked as mutable so that
