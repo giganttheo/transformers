@@ -370,6 +370,8 @@ class FlaxT5Attention(nn.Module):
 
         if self.has_variable("graph", "receivers"):
             print(self.variables["graph"])
+        elif "graph" in self.variables.keys():
+            print(f'graph in attn: {self.variables["graph"]}')
         else:
             print('nope')
 
@@ -1200,7 +1202,7 @@ class FlaxT5PreTrainedModel(FlaxPreTrainedModel):
         if dropout_rng is not None:
             rngs["dropout"] = dropout_rng
 
-        inputs = {"params": params or self.params, "graph":graph}
+        inputs = {"params": params or self.params, "graph": graph}
 
         # if past_key_values are passed then cache is already initialized a private flag init_cache has to be
         # passed down to ensure cache is used. It has to be made sure that cache is marked as mutable so that
@@ -1339,10 +1341,7 @@ class FlaxT5Module(nn.Module):
         output_hidden_states=None,
         return_dict=None,
         deterministic: bool = True,
-        graph: dict = None,
     ):
-        
-        print(f"graph in flaxT5Module: {graph}")
 
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
@@ -1566,10 +1565,9 @@ class FlaxT5ForConditionalGenerationModule(nn.Module):
         output_hidden_states=None,
         return_dict=None,
         deterministic: bool = True,
-        graph: dict = None,
     ):
         
-        print(f"graph in module: {graph}")
+        print(f'graph in module: {self.variables["graph"]}')
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         # Encode
@@ -1776,8 +1774,6 @@ class FlaxT5ForConditionalGeneration(FlaxT5PreTrainedModel):
     ):
         # initializing the cache
         batch_size, seq_length = decoder_input_ids.shape
-
-        print(f"kwargs: {kwargs}")
 
         past_key_values = self.init_cache(batch_size, max_length, encoder_outputs)
         # Note that usually one would have to put 0's in the attention_mask for x > input_ids.shape[-1] and x < cache_length.
