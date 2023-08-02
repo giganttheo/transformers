@@ -381,6 +381,8 @@ class FlaxT5Attention(nn.Module):
         # counter-act scaling in dot_product_attention_weights function
         query_states *= jnp.sqrt(query_states.shape[-1])
 
+        print(f'parameters keys: {self.variables["params"].keys()}')
+
         # for fast decoding causal attention mask should be shifted
         causal_attention_mask_shift = (
             self.variables["cache"]["cache_index"] if (self.has_variable("cache", "cached_key") and self.causal) else 0
