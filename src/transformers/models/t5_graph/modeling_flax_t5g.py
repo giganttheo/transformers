@@ -294,6 +294,25 @@ class FlaxT5Attention(nn.Module):
 
         return relative_buckets.astype("i4")
 
+    def compute_bias_sparse(self, query_length, key_length, receivers, senders):
+        """Compute binned relative position bias"""
+        context_position = jnp.arange(query_length, dtype="i4")[:, None]
+        memory_position = jnp.arange(key_length, dtype="i4")[:, None] #changed
+
+        relative_position = memory_position[receivers] - context_position[senders] 
+        relative_position_bucket = self._relative_position_bucket(
+            relative_position,
+            bidirectional=(not self.causal),
+            num_buckets=self.relative_attention_num_buckets,
+            max_distance=self.relative_attention_max_distance,
+        )
+
+        values = self.relative_attention_bias(relative_position_bucket)
+        heads = jnp.arange(self.n_heads)
+        return values[:, heads, :, 0, heads].transpose((1, 0, 2))
+        # values = values.transpose((2, 0, 1))[None, :, :, :]
+        # return values
+
     def compute_bias(self, query_length, key_length):
         """Compute binned relative position bias"""
         context_position = jnp.arange(query_length, dtype="i4")[:, None]
@@ -350,6 +369,30 @@ class FlaxT5Attention(nn.Module):
             attention_mask = combine_masks(pad_mask, attention_mask)
         return key, value, attention_mask
 
+    def _create_position_bias_sparse(
+        self, key_states, query_states, attention_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift
+    ):
+        cache_is_filled = False #self.causal and self.has_variable("cache", "cached_key") and (not init_cache)
+        key_length = key_states.shape[1]
+        query_length = key_length if cache_is_filled else query_states.shape[1]
+
+        if self.has_relative_attention_bias:
+            position_bias = self.compute_bias_sparse(query_length, key_length, receivers, senders)
+        else: #attention_mask is not None
+            position_bias = jnp.zeros_like(attention_mask)
+        # else:
+        #     position_bias = jnp.zeros((1, self.n_heads, query_length, key_length), dtype=self.dtype)
+
+        # # if key and values are already calculated, only the last query position bias should be taken
+        # if cache_is_filled:
+        #     max_decoder_length = self.variables["cache"]["cached_key"].shape[1]
+        #     position_bias = jax.lax.dynamic_slice(
+        #         position_bias,
+        #         (0, 0, causal_attention_mask_shift, 0),
+        #         (1, self.n_heads, seq_length, max_decoder_length),
+        #     )
+        return position_bias
+
     def _create_position_bias(
         self, key_states, query_states, attention_mask, init_cache, seq_length, causal_attention_mask_shift
     ):
@@ -403,18 +446,35 @@ class FlaxT5Attention(nn.Module):
         # counter-act scaling in dot_product_attention_weights function
         query_states *= jnp.sqrt(query_states.shape[-1])
 
-        print(f'parameters keys: {self.variables["params"].keys()}')
-
         if "receivers" in self.variables["params"].keys():
             #Graph attention
-            print("going with graph attention")
+            # print("going with graph attention")
             receivers = self.variables["params"]["receivers"]
             senders = self.variables["params"]["senders"]
-            attn_output, attn_weights = scaled_dot_product_attention_graph(query_states, key_states, value_states, receivers, senders, None)
+            graph_mask = self.variables["params"]["senders"]
+
+            # replace masked positions with -10_000
+            if graph_mask.shape == receivers.shape[0]:
+                mask_value = jnp.finfo(self.dtype).min
+                graph_mask = jax.lax.select(
+                    graph_mask > 0,
+                    jnp.full(graph_mask.shape, 0.0).astype(self.dtype),
+                    jnp.full(graph_mask.shape, mask_value).astype(self.dtype),
+                )
+
+            if position_bias is None:
+                # compute position bias (only for first layer)
+                position_bias = self._create_position_bias_sparse(
+                    key_states, query_states, graph_mask, receivers, senders, None, seq_length, causal_attention_mask_shift
+                )
+
+                if graph_mask is not None:
+                    position_bias = position_bias + graph_mask
+            attn_output, attn_weights = scaled_dot_product_attention_graph(query_states, key_states, value_states, receivers, senders, position_bias)
             
         else:
             #Vanilla attention
-            print("going with vanilla attention")
+            # print("going with vanilla attention")
 
             # for fast decoding causal attention mask should be shifted
             causal_attention_mask_shift = (
