@@ -465,7 +465,7 @@ class FlaxT5Attention(nn.Module):
             if position_bias is None:
                 # compute position bias (only for first layer)
                 position_bias = self._create_position_bias_sparse(
-                    key_states, query_states, graph_mask, receivers, senders, None, seq_length, causal_attention_mask_shift
+                    key_states, query_states, graph_mask, receivers, senders, None, None, None
                 )
 
                 if graph_mask is not None:
