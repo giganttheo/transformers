@@ -17,7 +17,9 @@
 
 import copy
 from dataclasses import field
-from typing import Callable, Optional, Tuple
+from typing import Any, Callable, Iterable, Mapping, Optional, Union
+
+ArrayTree = Union[jnp.ndarray, Iterable['ArrayTree'], Mapping[Any, 'ArrayTree']]
 
 import flax.linen as nn
 import jax
@@ -30,7 +32,10 @@ from flax.linen.attention import dot_product_attention_weights
 from flax.traverse_util import flatten_dict, unflatten_dict
 from jax.random import PRNGKey
 
-from jraph import segment_sum, segment_softmax
+# from jraph import segment_sum, segment_softmax
+
+
+
 from functools import partial
 
 from ...modeling_flax_outputs import (
@@ -59,6 +64,25 @@ _CONFIG_FOR_DOC = "T5Config"
 remat = nn_partitioning.remat
 
 
+def segment_softmax(logits: jnp.ndarray,
+                    segment_ids: jnp.ndarray,
+                    num_segments: Optional[int] = None,
+                    indices_are_sorted: bool = False,
+                    unique_indices: bool = False) -> ArrayTree:
+  # segment_softmax inspired by jraph's implementation, but fixed to give the same results as jax.nn.softmax by using jax.ops segment functions
+
+  # First, subtract the segment max for numerical stability
+  maxs = jax.ops.segment_max(logits, segment_ids, num_segments, indices_are_sorted,
+                     unique_indices, bucket_size=1)
+  logits = logits - maxs[segment_ids]
+  # Then take the exp
+  logits = jnp.exp(logits)
+  # Then calculate the normalizers
+  normalizers =   jax.ops.segment_sum(logits, segment_ids=segment_ids, num_segments=num_segments, indices_are_sorted=indices_are_sorted, unique_indices=unique_indices, bucket_size=1)
+  normalizers = normalizers[segment_ids]
+  softmax = logits / normalizers
+  return softmax
+
 #Graph attention
 @partial(jax.vmap, in_axes=(0,0,0,0,0,0)) #vectorize over batches
 @partial(jax.vmap, in_axes=(-2,-2,-2,0,0,0), out_axes=(-2))  #vectorize over heads
@@ -79,9 +103,11 @@ def scaled_dot_product_attention_graph(q, k, v, receivers, senders, bias=None):
   # values = jnp.expand_dims(w, -1) * v[senders, :] #(num_edges, d_v)
   values = jnp.einsum('e,ed->ed', w, v[senders]) #(num_edges, d_v)
   #summing over the nodes
-  values = segment_sum(values,
+  values = jax.ops.segment_sum(values,
                        segment_ids=receivers,
-                       num_segments=seq_len) #(seq_len, d_v)
+                       num_segments=seq_len,
+                       unique_indices=False,
+                       bucket_size=1) #(seq_len, d_v)
   return values, w
 
 
