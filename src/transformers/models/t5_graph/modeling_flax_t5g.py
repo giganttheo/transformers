@@ -17,7 +17,7 @@
 
 import copy
 from dataclasses import field
-from typing import Any, Callable, Iterable, Mapping, Optional, Union
+from typing import Any, Callable, Iterable, Mapping, Optional, Union, Tuple
 
 import flax.linen as nn
 import jax
