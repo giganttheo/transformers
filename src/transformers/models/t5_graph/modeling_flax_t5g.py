@@ -19,8 +19,6 @@ import copy
 from dataclasses import field
 from typing import Any, Callable, Iterable, Mapping, Optional, Union
 
-ArrayTree = Union[jnp.ndarray, Iterable['ArrayTree'], Mapping[Any, 'ArrayTree']]
-
 import flax.linen as nn
 import jax
 import jax.numpy as jnp
@@ -32,9 +30,7 @@ from flax.linen.attention import dot_product_attention_weights
 from flax.traverse_util import flatten_dict, unflatten_dict
 from jax.random import PRNGKey
 
-# from jraph import segment_sum, segment_softmax
-
-
+ArrayTree = Union[jnp.ndarray, Iterable['ArrayTree'], Mapping[Any, 'ArrayTree']]
 
 from functools import partial
 
@@ -107,6 +103,7 @@ def scaled_dot_product_attention_graph(q, k, v, receivers, senders, bias=None):
                        segment_ids=receivers,
                        num_segments=seq_len,
                        unique_indices=False,
+                       indices_are_sorted=False,
                        bucket_size=1) #(seq_len, d_v)
   return values, w
 
