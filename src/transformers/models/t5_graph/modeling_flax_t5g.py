@@ -476,7 +476,7 @@ class FlaxT5Attention(nn.Module):
             # print("going with graph attention")
             receivers = self.variables["params"]["receivers"]
             senders = self.variables["params"]["senders"]
-            graph_mask = self.variables["params"]["senders"]
+            graph_mask = self.variables["params"]["graph_mask"]
 
             # replace masked positions with -10_000
             if graph_mask.shape == receivers.shape[0]:
