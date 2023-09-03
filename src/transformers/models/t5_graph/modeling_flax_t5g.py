@@ -94,15 +94,15 @@ def scaled_dot_product_attention_graph(q, k, v, receivers, senders, bias=None):
     attn_logits = attn_logits + bias
   #softmax over receiver nodes
   w = segment_softmax(attn_logits,
-                      segment_ids=receivers,
+                      segment_ids=senders,
                       num_segments = seq_len,
                       bucket_size=bucket_size) #(num_edges,)
   #attention weights applied to the values for every edge:
   # values = jnp.expand_dims(w, -1) * v[senders, :] #(num_edges, d_v)
-  values = jnp.einsum('e,ed->ed', w, v[senders]) #(num_edges, d_v)
+  values = jnp.einsum('e,ed->ed', w, v[receivers]) #(num_edges, d_v)
   #summing over the nodes
   values = jax.ops.segment_sum(values,
-                       segment_ids=receivers,
+                       segment_ids=senders,
                        num_segments=seq_len,
                        unique_indices=False,
                        indices_are_sorted=False,
