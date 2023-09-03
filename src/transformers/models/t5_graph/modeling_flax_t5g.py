@@ -64,17 +64,17 @@ def segment_softmax(logits: jnp.ndarray,
                     segment_ids: jnp.ndarray,
                     num_segments: Optional[int] = None,
                     indices_are_sorted: bool = False,
-                    unique_indices: bool = False) -> ArrayTree:
+                    unique_indices: bool = False,
+                    bucket_size=None) -> ArrayTree:
   # segment_softmax inspired by jraph's implementation, but fixed to give the same results as jax.nn.softmax by using jax.ops segment functions
-
   # First, subtract the segment max for numerical stability
   maxs = jax.ops.segment_max(logits, segment_ids, num_segments, indices_are_sorted,
-                     unique_indices, bucket_size=1)
+                     unique_indices, bucket_size=bucket_size)
   logits = logits - maxs[segment_ids]
   # Then take the exp
   logits = jnp.exp(logits)
   # Then calculate the normalizers
-  normalizers =   jax.ops.segment_sum(logits, segment_ids=segment_ids, num_segments=num_segments, indices_are_sorted=indices_are_sorted, unique_indices=unique_indices, bucket_size=1)
+  normalizers =   jax.ops.segment_sum(logits, segment_ids=segment_ids, num_segments=num_segments, indices_are_sorted=indices_are_sorted, unique_indices=unique_indices, bucket_size=bucket_size)
   normalizers = normalizers[segment_ids]
   softmax = logits / normalizers
   return softmax
@@ -85,6 +85,7 @@ def segment_softmax(logits: jnp.ndarray,
 def scaled_dot_product_attention_graph(q, k, v, receivers, senders, bias=None):
   # if graph_mask == None: #to ignore padded parts of the graph
   #   graph_mask = (receivers != -1)
+  bucket_size=1000
   seq_len, depth = q.shape
   #compute attention logits: <Q,K> / sqrt(d_q)
   #depth = q.shape[-1]
@@ -94,7 +95,8 @@ def scaled_dot_product_attention_graph(q, k, v, receivers, senders, bias=None):
   #softmax over receiver nodes
   w = segment_softmax(attn_logits,
                       segment_ids=receivers,
-                      num_segments = seq_len) #(num_edges,)
+                      num_segments = seq_len,
+                      bucket_size=bucket_size) #(num_edges,)
   #attention weights applied to the values for every edge:
   # values = jnp.expand_dims(w, -1) * v[senders, :] #(num_edges, d_v)
   values = jnp.einsum('e,ed->ed', w, v[senders]) #(num_edges, d_v)
@@ -104,7 +106,7 @@ def scaled_dot_product_attention_graph(q, k, v, receivers, senders, bias=None):
                        num_segments=seq_len,
                        unique_indices=False,
                        indices_are_sorted=False,
-                       bucket_size=1) #(seq_len, d_v)
+                       bucket_size=bucket_size) #(seq_len, d_v)
   return values, w
 
 
