@@ -29,10 +29,10 @@ from flax.linen import partitioning as nn_partitioning
 from flax.linen.attention import dot_product_attention_weights
 from flax.traverse_util import flatten_dict, unflatten_dict
 from jax.random import PRNGKey
+from functools import partial
 
 ArrayTree = Union[jnp.ndarray, Iterable['ArrayTree'], Mapping[Any, 'ArrayTree']]
 
-from functools import partial
 
 from ...modeling_flax_outputs import (
     FlaxBaseModelOutput,
@@ -89,7 +89,7 @@ def scaled_dot_product_attention_graph(q, k, v, receivers, senders, bias=None):
   seq_len, depth = q.shape
   #compute attention logits: <Q,K> / sqrt(d_q)
   #depth = q.shape[-1]
-  attn_logits = jnp.einsum('ed, ed -> e', q[receivers] / jnp.sqrt(depth), k[senders]) # (num_edges,)
+  attn_logits = jnp.einsum('ed, ed -> e', q[senders] / jnp.sqrt(depth), k[receivers]) # (num_edges,)
   if bias is not None:
     attn_logits = attn_logits + bias
   #softmax over receiver nodes
@@ -98,7 +98,6 @@ def scaled_dot_product_attention_graph(q, k, v, receivers, senders, bias=None):
                       num_segments = seq_len,
                       bucket_size=bucket_size) #(num_edges,)
   #attention weights applied to the values for every edge:
-  # values = jnp.expand_dims(w, -1) * v[senders, :] #(num_edges, d_v)
   values = jnp.einsum('e,ed->ed', w, v[receivers]) #(num_edges, d_v)
   #summing over the nodes
   values = jax.ops.segment_sum(values,
