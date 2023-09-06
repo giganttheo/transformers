@@ -428,7 +428,7 @@ class FlaxT5Attention(nn.Module):
     def __call__(
         self,
         hidden_states,
-        # attention_mask=None,
+        attention_mask=None,
         key_value_states=None,
         position_bias=None,
         use_cache=False,
