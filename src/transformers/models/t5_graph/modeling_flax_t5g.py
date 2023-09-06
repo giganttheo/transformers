@@ -83,12 +83,9 @@ def segment_softmax(logits: jnp.ndarray,
 @partial(jax.vmap, in_axes=(0,0,0,0,0,0)) #vectorize over batches
 @partial(jax.vmap, in_axes=(-2,-2,-2,0,0,0), out_axes=(-2))  #vectorize over heads
 def scaled_dot_product_attention_graph(q, k, v, receivers, senders, bias=None):
-  # if graph_mask == None: #to ignore padded parts of the graph
-  #   graph_mask = (receivers != -1)
   bucket_size=1000
   seq_len, depth = q.shape
   #compute attention logits: <Q,K> / sqrt(d_q)
-  #depth = q.shape[-1]
   attn_logits = jnp.einsum('ed, ed -> e', q[senders] / jnp.sqrt(depth), k[receivers]) # (num_edges,)
   if bias is not None:
     attn_logits = attn_logits + bias
@@ -321,7 +318,7 @@ class FlaxT5Attention(nn.Module):
     def compute_bias_sparse(self, query_length, key_length, receivers, senders):
         """Compute binned relative position bias"""
         context_position = jnp.arange(query_length, dtype="i4")[:, None]
-        memory_position = jnp.arange(key_length, dtype="i4")[:, None] #changed
+        memory_position = jnp.arange(key_length, dtype="i4")[:, None]
 
         relative_position = memory_position[receivers] - context_position[senders] 
         relative_position_bucket = self._relative_position_bucket(
@@ -334,8 +331,6 @@ class FlaxT5Attention(nn.Module):
         values = self.relative_attention_bias(relative_position_bucket)
         heads = jnp.arange(self.n_heads)
         return values[:, heads, :, 0, heads].transpose((1, 0, 2))
-        # values = values.transpose((2, 0, 1))[None, :, :, :]
-        # return values
 
     def compute_bias(self, query_length, key_length):
         """Compute binned relative position bias"""
@@ -402,19 +397,8 @@ class FlaxT5Attention(nn.Module):
 
         if self.has_relative_attention_bias:
             position_bias = self.compute_bias_sparse(query_length, key_length, receivers, senders)
-        else: #attention_mask is not None
+        else: #attention_mask is never None
             position_bias = jnp.zeros_like(attention_mask)
-        # else:
-        #     position_bias = jnp.zeros((1, self.n_heads, query_length, key_length), dtype=self.dtype)
-
-        # # if key and values are already calculated, only the last query position bias should be taken
-        # if cache_is_filled:
-        #     max_decoder_length = self.variables["cache"]["cached_key"].shape[1]
-        #     position_bias = jax.lax.dynamic_slice(
-        #         position_bias,
-        #         (0, 0, causal_attention_mask_shift, 0),
-        #         (1, self.n_heads, seq_length, max_decoder_length),
-        #     )
         return position_bias
 
     def _create_position_bias(
@@ -444,7 +428,7 @@ class FlaxT5Attention(nn.Module):
     def __call__(
         self,
         hidden_states,
-        attention_mask=None,
+        # attention_mask=None,
         key_value_states=None,
         position_bias=None,
         use_cache=False,
@@ -472,10 +456,13 @@ class FlaxT5Attention(nn.Module):
 
         if "receivers" in self.variables["params"].keys():
             #Graph attention
-            # print("going with graph attention")
             receivers = self.variables["params"]["receivers"]
             senders = self.variables["params"]["senders"]
             graph_mask = self.variables["params"]["graph_mask"]
+
+            if self.causal:
+              causal_mask = receivers <= senders
+              graph_mask = graph_mask * causal_mask
 
             # replace masked positions with -10_000
             mask_value = jnp.finfo(self.dtype).min
