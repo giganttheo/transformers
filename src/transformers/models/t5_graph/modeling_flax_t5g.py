@@ -391,7 +391,7 @@ class FlaxT5Attention(nn.Module):
     def _create_position_bias_sparse(
         self, key_states, query_states, attention_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift
     ):
-        cache_is_filled = False #self.causal and self.has_variable("cache", "cached_key") and (not init_cache)
+        cache_is_filled = self.causal and self.has_variable("cache", "cached_key") and (not init_cache)
         key_length = key_states.shape[1]
         query_length = key_length if cache_is_filled else query_states.shape[1]
 
@@ -399,12 +399,15 @@ class FlaxT5Attention(nn.Module):
             position_bias = self.compute_bias_sparse(query_length, key_length, receivers, senders)
         else: #attention_mask is never None
             position_bias = jnp.zeros_like(attention_mask)
+
+        # if cache_is_filled:
+            
         return position_bias
 
     def _create_position_bias(
         self, key_states, query_states, attention_mask, init_cache, seq_length, causal_attention_mask_shift
     ):
-        cache_is_filled = False #self.causal and self.has_variable("cache", "cached_key") and (not init_cache)
+        cache_is_filled = self.causal and self.has_variable("cache", "cached_key") and (not init_cache)
         key_length = key_states.shape[1]
         query_length = key_length if cache_is_filled else query_states.shape[1]
 
@@ -416,13 +419,13 @@ class FlaxT5Attention(nn.Module):
             position_bias = jnp.zeros((1, self.n_heads, query_length, key_length), dtype=self.dtype)
 
         # # if key and values are already calculated, only the last query position bias should be taken
-        # if cache_is_filled:
-        #     max_decoder_length = self.variables["cache"]["cached_key"].shape[1]
-        #     position_bias = jax.lax.dynamic_slice(
-        #         position_bias,
-        #         (0, 0, causal_attention_mask_shift, 0),
-        #         (1, self.n_heads, seq_length, max_decoder_length),
-        #     )
+        if cache_is_filled:
+            max_decoder_length = self.variables["cache"]["cached_key"].shape[1]
+            position_bias = jax.lax.dynamic_slice(
+                position_bias,
+                (0, 0, causal_attention_mask_shift, 0),
+                (1, self.n_heads, seq_length, max_decoder_length),
+            )
         return position_bias
 
     def __call__(
@@ -460,8 +463,13 @@ class FlaxT5Attention(nn.Module):
             senders = self.variables["params"]["senders"]
             graph_mask = self.variables["params"]["graph_mask"]
 
+            # for fast decoding causal attention mask should be shifted
+            causal_attention_mask_shift = (
+                self.variables["cache"]["cache_index"] if (self.has_variable("cache", "cached_key") and self.causal) else 0
+            )
+
             if self.causal:
-              causal_mask = receivers <= senders
+              causal_mask = receivers + causal_attention_mask_shift <= senders #TODO side?
               graph_mask = graph_mask * causal_mask
 
             # replace masked positions with -10_000
@@ -471,11 +479,16 @@ class FlaxT5Attention(nn.Module):
                 jnp.full(graph_mask.shape, 0.0).astype(self.dtype),
                 jnp.full(graph_mask.shape, mask_value).astype(self.dtype),
             )
-
+            # During fast autoregressive decoding, we feed one position at a time,
+            # and cache the keys and values step by step.
+            if self.causal and (self.has_variable("cache", "cached_key") or init_cache):
+                key_states, value_states, attention_mask = self._concatenate_to_cache(
+                    key_states, value_states, query_states, attention_mask
+                )
             if position_bias is None:
                 # compute position bias (only for first layer)
                 position_bias = self._create_position_bias_sparse(
-                    key_states, query_states, graph_mask, receivers, senders, None, None, None
+                    key_states, query_states, graph_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift
                 )
 
                 if graph_mask is not None:
