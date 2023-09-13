@@ -404,7 +404,7 @@ class FlaxT5Attention(nn.Module):
     def _create_position_bias(
         self, key_states, query_states, attention_mask, init_cache, seq_length, causal_attention_mask_shift
     ):
-        cache_is_filled = self.causal and self.has_variable("cache", "cached_key") and (not init_cache)
+        cache_is_filled = False #self.causal and self.has_variable("cache", "cached_key") and (not init_cache)
         key_length = key_states.shape[1]
         query_length = key_length if cache_is_filled else query_states.shape[1]
 
@@ -415,14 +415,14 @@ class FlaxT5Attention(nn.Module):
         else:
             position_bias = jnp.zeros((1, self.n_heads, query_length, key_length), dtype=self.dtype)
 
-        # if key and values are already calculated, only the last query position bias should be taken
-        if cache_is_filled:
-            max_decoder_length = self.variables["cache"]["cached_key"].shape[1]
-            position_bias = jax.lax.dynamic_slice(
-                position_bias,
-                (0, 0, causal_attention_mask_shift, 0),
-                (1, self.n_heads, seq_length, max_decoder_length),
-            )
+        # # if key and values are already calculated, only the last query position bias should be taken
+        # if cache_is_filled:
+        #     max_decoder_length = self.variables["cache"]["cached_key"].shape[1]
+        #     position_bias = jax.lax.dynamic_slice(
+        #         position_bias,
+        #         (0, 0, causal_attention_mask_shift, 0),
+        #         (1, self.n_heads, seq_length, max_decoder_length),
+        #     )
         return position_bias
 
     def __call__(
