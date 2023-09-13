@@ -610,8 +610,8 @@ class FlaxGenerationMixin:
             """state update fn."""
             model_outputs = model(state.running_token, params=params, **state.model_kwargs)
             logits = model_outputs.logits[:, -1]
-            print(logits)
-            print(state.model_kwargs.keys())
+            # print(logits)
+            # print(state.model_kwargs.keys())
 
             # apply min_length, ...
             logits = logits_processor(state.sequences, logits, state.cur_len)
