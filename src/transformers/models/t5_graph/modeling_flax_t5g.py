@@ -82,18 +82,20 @@ def segment_softmax(logits: jnp.ndarray,
 #Graph attention
 @partial(jax.vmap, in_axes=(0,0,0,0,0,0)) #vectorize over batches
 @partial(jax.vmap, in_axes=(-2,-2,-2,0,0,0), out_axes=(-2))  #vectorize over heads
-def scaled_dot_product_attention_graph(q, k, v, receivers, senders, bias=None):
+def scaled_dot_product_attention_graph(q, k, v, receivers, senders, bias=None, dtype=None):
+  q, k = nn.dtypes.promote_dtype(q, k, dtype=dtype)
+  dtype = q.dtype
   bucket_size=1000
   seq_len, depth = q.shape
   #compute attention logits: <Q,K> / sqrt(d_q)
-  attn_logits = jnp.einsum('ed, ed -> e', q[senders] / jnp.sqrt(depth), k[receivers]) # (num_edges,)
+  attn_logits = jnp.einsum('ed, ed -> e', q[senders] / jnp.sqrt(depth).astype(dtype), k[receivers]) # (num_edges,)
   if bias is not None:
     attn_logits = attn_logits + bias
   #softmax over receiver nodes
   w = segment_softmax(attn_logits,
                       segment_ids=senders,
                       num_segments = seq_len,
-                      bucket_size=bucket_size) #(num_edges,)
+                      bucket_size=bucket_size).astype(dtype) #(num_edges,)
   #attention weights applied to the values for every edge:
   values = jnp.einsum('e,ed->ed', w, v[receivers]) #(num_edges, d_v)
   #summing over the nodes
@@ -102,7 +104,7 @@ def scaled_dot_product_attention_graph(q, k, v, receivers, senders, bias=None):
                        num_segments=seq_len,
                        unique_indices=False,
                        indices_are_sorted=False,
-                       bucket_size=bucket_size) #(seq_len, d_v)
+                       bucket_size=bucket_size).astype(dtype) #(seq_len, d_v)
   return values, w
 
 
@@ -498,7 +500,7 @@ class FlaxT5Attention(nn.Module):
 
                 if graph_mask is not None:
                     position_bias = position_bias + graph_mask
-            attn_output, attn_weights = scaled_dot_product_attention_graph(query_states, key_states, value_states, receivers, senders, position_bias)
+            attn_output, attn_weights = scaled_dot_product_attention_graph(query_states, key_states, value_states, receivers, senders, position_bias, dtype=self.dtype)
             
         else:
             #Vanilla attention
