@@ -404,7 +404,7 @@ class FlaxT5Attention(nn.Module):
         if self.has_relative_attention_bias:
             position_bias = self.compute_bias_sparse(query_length, key_length, receivers, senders)
         else: #attention_mask is never None
-            position_bias = jnp.zeros_like(attention_mask)
+            position_bias = jnp.zeros_like(attention_mask, dtype=self.dtype)
 
         # if cache_is_filled:
             
@@ -420,7 +420,7 @@ class FlaxT5Attention(nn.Module):
         if self.has_relative_attention_bias:
             position_bias = self.compute_bias(query_length, key_length)
         elif attention_mask is not None:
-            position_bias = jnp.zeros_like(attention_mask)
+            position_bias = jnp.zeros_like(attention_mask, dtype=self.dtype)
         else:
             position_bias = jnp.zeros((1, self.n_heads, query_length, key_length), dtype=self.dtype)
 
@@ -475,7 +475,7 @@ class FlaxT5Attention(nn.Module):
             )
 
             if self.causal:
-              causal_mask = receivers + causal_attention_mask_shift <= senders #TODO side?
+              causal_mask = receivers + causal_attention_mask_shift <= senders
               graph_mask = graph_mask * causal_mask
 
             # replace masked positions with -10_000
@@ -537,7 +537,7 @@ class FlaxT5Attention(nn.Module):
             # During fast autoregressive decoding, we feed one position at a time,
             # and cache the keys and values step by step.
             if self.causal and (self.has_variable("cache", "cached_key") or init_cache):
-                key_states, value_states, attention_mask = self._concatenate_to_cache(
+                key_states, value_states, attention_attention_mask = self._concatenate_to_cache( #TODO: here i reproduce the typo from the original code
                     key_states, value_states, query_states, attention_mask
                 )
 
