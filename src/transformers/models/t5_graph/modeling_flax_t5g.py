@@ -475,7 +475,7 @@ class FlaxT5Attention(nn.Module):
             )
 
             if self.causal:
-              causal_mask = receivers + causal_attention_mask_shift <= senders
+              causal_mask = receivers <= senders + causal_attention_mask_shift #test
               graph_mask = graph_mask * causal_mask
 
             # replace masked positions with -10_000
@@ -502,7 +502,7 @@ class FlaxT5Attention(nn.Module):
                     position_bias = position_bias + graph_mask
             attn_output, attn_weights = scaled_dot_product_attention_graph(query_states, key_states, value_states, receivers, senders, position_bias, self.dtype)
 
-        else:
+        else: #for initialization
             #Graph attention
             receivers = jnp.array([[[0]]*self.n_heads]*batch_size, dtype=jnp.int32)
             senders = jnp.array([[[0]]*self.n_heads]*batch_size, dtype=jnp.int32)
