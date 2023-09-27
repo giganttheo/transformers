@@ -80,7 +80,7 @@ def segment_softmax(logits: jnp.ndarray,
   return softmax
 
 #Graph attention
-@partial(jax.vmap, in_axes=(0,0,0,0,0,0)) #vectorize over batches
+@partial(jax.vmap, in_axes=(0,0,0,0,0,0,None)) #vectorize over batches
 @partial(jax.vmap, in_axes=(-2,-2,-2,0,0,0,None), out_axes=(-2))  #vectorize over heads
 def scaled_dot_product_attention_graph(q, k, v, receivers, senders, bias=None, dtype=None):
   q, k = nn.dtypes.promote_dtype(q, k, dtype=dtype)
