@@ -475,7 +475,7 @@ class FlaxT5Attention(nn.Module):
             )
 
             if self.causal:
-              causal_mask = receivers + causal_attention_mask_shift <= senders
+              causal_mask = receivers <= senders + causal_attention_mask_shift 
               graph_mask = graph_mask * causal_mask
 
             # replace masked positions with -10_000
@@ -514,7 +514,7 @@ class FlaxT5Attention(nn.Module):
             )
 
             if self.causal:
-              causal_mask = receivers + causal_attention_mask_shift <= senders
+              causal_mask = receivers <= senders + causal_attention_mask_shift 
               graph_mask = graph_mask * causal_mask
 
             # replace masked positions with -10_000
