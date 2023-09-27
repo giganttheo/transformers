@@ -487,11 +487,11 @@ class FlaxT5Attention(nn.Module):
             )
             # During fast autoregressive decoding, we feed one position at a time,
             # and cache the keys and values step by step.
-            # if self.causal and (self.has_variable("cache", "cached_key") or init_cache):
-            #     key_states, value_states, attention_mask = self._concatenate_to_cache(
-            #         key_states, value_states, query_states, graph_mask, receivers
-            #     )
-            # position_bias = None #TODO test
+            if self.causal and (self.has_variable("cache", "cached_key") or init_cache):
+                # TODO check this
+                key_states, value_states, attention_mask = self._concatenate_to_cache(
+                    key_states, value_states, query_states, graph_mask, receivers
+                )
             if position_bias is None:
                 # compute position bias (only for first layer)
                 position_bias = self._create_position_bias_sparse(
@@ -501,83 +501,124 @@ class FlaxT5Attention(nn.Module):
                 if graph_mask is not None:
                     position_bias = position_bias + graph_mask
             attn_output, attn_weights = scaled_dot_product_attention_graph(query_states, key_states, value_states, receivers, senders, position_bias, self.dtype)
-            
+
         else:
-            #Vanilla attention
-            # print("going with vanilla attention")
+            #Graph attention
+            receivers = jnp.array([0], dtype=jnp.int32)
+            senders = jnp.array([0], dtype=jnp.int32)
+            graph_mask = jnp.array([0], dtype = self.dtype)
 
             # for fast decoding causal attention mask should be shifted
             causal_attention_mask_shift = (
                 self.variables["cache"]["cache_index"] if (self.has_variable("cache", "cached_key") and self.causal) else 0
             )
-            # create causal attention_mask; attention_mask has to be defined when model is causal
+
             if self.causal:
-                causal_attention_mask = make_causal_mask(attention_mask, dtype="bool")
+              causal_mask = receivers + causal_attention_mask_shift <= senders
+              graph_mask = graph_mask * causal_mask
 
-                # fast decoding for generate requires special attention_mask
-                if self.has_variable("cache", "cached_key"):
-                    max_decoder_length = self.variables["cache"]["cached_key"].shape[1]
-                    causal_attention_mask = jax.lax.dynamic_slice(
-                        causal_attention_mask,
-                        (0, 0, causal_attention_mask_shift, 0),
-                        (1, 1, seq_length, max_decoder_length),
-                    )
-
-                # broadcast causal attention mask & attention mask to fit for merge
-                causal_attention_mask = jnp.broadcast_to(
-                    causal_attention_mask, (batch_size,) + causal_attention_mask.shape[1:]
-                )
-                attention_mask = jnp.broadcast_to(
-                    jnp.expand_dims(attention_mask, axis=(-3, -2)), causal_attention_mask.shape
-                )
-                attention_mask = combine_masks(attention_mask, causal_attention_mask)
-            elif attention_mask is not None:
-                attention_mask = jnp.expand_dims(attention_mask, axis=(-3, -2))
-
+            # replace masked positions with -10_000
+            mask_value = jnp.finfo(self.dtype).min
+            graph_mask = jax.lax.select(
+                graph_mask > 0,
+                jnp.full(graph_mask.shape, 0.0).astype(self.dtype),
+                jnp.full(graph_mask.shape, mask_value).astype(self.dtype),
+            )
             # During fast autoregressive decoding, we feed one position at a time,
             # and cache the keys and values step by step.
             if self.causal and (self.has_variable("cache", "cached_key") or init_cache):
-                key_states, value_states, attention_attention_mask = self._concatenate_to_cache( #TODO: here i reproduce the typo from the original code
-                    key_states, value_states, query_states, attention_mask
+                # TODO check this
+                key_states, value_states, attention_mask = self._concatenate_to_cache(
+                    key_states, value_states, query_states, graph_mask, receivers
                 )
-
-            # replace masked positions with -10_000
-            if attention_mask is not None:
-                mask_value = jnp.finfo(self.dtype).min
-                attention_mask = jax.lax.select(
-                    attention_mask > 0,
-                    jnp.full(attention_mask.shape, 0.0).astype(self.dtype),
-                    jnp.full(attention_mask.shape, mask_value).astype(self.dtype),
-                )
-
             if position_bias is None:
                 # compute position bias (only for first layer)
-                position_bias = self._create_position_bias(
-                    key_states, query_states, attention_mask, init_cache, seq_length, causal_attention_mask_shift
+                position_bias = self._create_position_bias_sparse(
+                    key_states, query_states, graph_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift
                 )
 
-                if attention_mask is not None:
-                    position_bias = position_bias + attention_mask
+                if graph_mask is not None:
+                    position_bias = position_bias + graph_mask
+            attn_output, attn_weights = scaled_dot_product_attention_graph(query_states, key_states, value_states, receivers, senders, position_bias, self.dtype)
 
-            # create dropout rng
-            dropout_rng = None
-            if not deterministic and self.dropout > 0.0:
-                dropout_rng = self.make_rng("dropout")
 
-            # Softmax(QK^T)
-            attn_weights = dot_product_attention_weights(
-                query_states,
-                key_states,
-                bias=position_bias,
-                dropout_rng=dropout_rng,
-                dropout_rate=self.dropout,
-                broadcast_dropout=True,
-                deterministic=deterministic,
-                dtype=self.dtype,
-            )
 
-            # multiply with value states
-            attn_output = jnp.einsum("...hqk,...khd->...qhd", attn_weights, value_states)
+        # else:
+        #     #Vanilla attention
+        #     # print("going with vanilla attention")
+
+        #     # for fast decoding causal attention mask should be shifted
+        #     causal_attention_mask_shift = (
+        #         self.variables["cache"]["cache_index"] if (self.has_variable("cache", "cached_key") and self.causal) else 0
+        #     )
+        #     # create causal attention_mask; attention_mask has to be defined when model is causal
+        #     if self.causal:
+        #         causal_attention_mask = make_causal_mask(attention_mask, dtype="bool")
+
+        #         # fast decoding for generate requires special attention_mask
+        #         if self.has_variable("cache", "cached_key"):
+        #             max_decoder_length = self.variables["cache"]["cached_key"].shape[1]
+        #             causal_attention_mask = jax.lax.dynamic_slice(
+        #                 causal_attention_mask,
+        #                 (0, 0, causal_attention_mask_shift, 0),
+        #                 (1, 1, seq_length, max_decoder_length),
+        #             )
+
+        #         # broadcast causal attention mask & attention mask to fit for merge
+        #         causal_attention_mask = jnp.broadcast_to(
+        #             causal_attention_mask, (batch_size,) + causal_attention_mask.shape[1:]
+        #         )
+        #         attention_mask = jnp.broadcast_to(
+        #             jnp.expand_dims(attention_mask, axis=(-3, -2)), causal_attention_mask.shape
+        #         )
+        #         attention_mask = combine_masks(attention_mask, causal_attention_mask)
+        #     elif attention_mask is not None:
+        #         attention_mask = jnp.expand_dims(attention_mask, axis=(-3, -2))
+
+        #     # During fast autoregressive decoding, we feed one position at a time,
+        #     # and cache the keys and values step by step.
+        #     if self.causal and (self.has_variable("cache", "cached_key") or init_cache):
+        #         key_states, value_states, attention_attention_mask = self._concatenate_to_cache( #TODO: here i reproduce the typo from the original code
+        #             key_states, value_states, query_states, attention_mask
+        #         )
+
+        #     # replace masked positions with -10_000
+        #     if attention_mask is not None:
+        #         mask_value = jnp.finfo(self.dtype).min
+        #         attention_mask = jax.lax.select(
+        #             attention_mask > 0,
+        #             jnp.full(attention_mask.shape, 0.0).astype(self.dtype),
+        #             jnp.full(attention_mask.shape, mask_value).astype(self.dtype),
+        #         )
+
+        #     if position_bias is None:
+        #         # compute position bias (only for first layer)
+        #         position_bias = self._create_position_bias(
+        #             key_states, query_states, attention_mask, init_cache, seq_length, causal_attention_mask_shift
+        #         )
+
+        #         if attention_mask is not None:
+        #             position_bias = position_bias + attention_mask
+
+        #     # create dropout rng
+        #     dropout_rng = None
+        #     if not deterministic and self.dropout > 0.0:
+        #         dropout_rng = self.make_rng("dropout")
+
+        #     # Softmax(QK^T)
+        #     attn_weights = dot_product_attention_weights(
+        #         query_states,
+        #         key_states,
+        #         bias=position_bias,
+        #         dropout_rng=dropout_rng,
+        #         dropout_rate=self.dropout,
+        #         broadcast_dropout=True,
+        #         deterministic=deterministic,
+        #         dtype=self.dtype,
+        #     )
+
+        #     # multiply with value states
+        #     attn_output = jnp.einsum("...hqk,...khd->...qhd", attn_weights, value_states)
 
         # bring back to (batch_size, seq_length, d_model)
         attn_output = self._merge_heads(attn_output)
