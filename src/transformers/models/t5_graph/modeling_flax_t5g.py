@@ -490,7 +490,7 @@ class FlaxT5Attention(nn.Module):
             if self.causal and (self.has_variable("cache", "cached_key") or init_cache):
                 # TODO check this
                 key_states, value_states, graph_mask = self._concatenate_to_cache(
-                    key_states, value_states, query_states, graph_mask, senders#receivers
+                    key_states, value_states, query_states, graph_mask, senders,#receivers
                 )
             if position_bias is None:
                 # compute position bias (only for first layer)
