@@ -475,7 +475,7 @@ class FlaxT5Attention(nn.Module):
             )
 
             if self.causal:
-              causal_mask = receivers <= senders + causal_attention_mask_shift #test
+              causal_mask = receivers + causal_attention_mask_shift <= senders
               graph_mask = graph_mask * causal_mask
 
             # replace masked positions with -10_000
@@ -489,8 +489,8 @@ class FlaxT5Attention(nn.Module):
             # and cache the keys and values step by step.
             if self.causal and (self.has_variable("cache", "cached_key") or init_cache):
                 # TODO check this
-                key_states, value_states, attention_mask = self._concatenate_to_cache(
-                    key_states, value_states, query_states, graph_mask, receivers
+                key_states, value_states, graph_mask = self._concatenate_to_cache(
+                    key_states, value_states, query_states, graph_mask, senders#receivers
                 )
             if position_bias is None:
                 # compute position bias (only for first layer)
@@ -528,8 +528,8 @@ class FlaxT5Attention(nn.Module):
             # and cache the keys and values step by step.
             if self.causal and (self.has_variable("cache", "cached_key") or init_cache):
                 # TODO check this
-                key_states, value_states, attention_mask = self._concatenate_to_cache(
-                    key_states, value_states, query_states, graph_mask, receivers
+                key_states, value_states, graph_mask = self._concatenate_to_cache(
+                    key_states, value_states, query_states, graph_mask, senders,#receivers
                 )
             if position_bias is None:
                 # compute position bias (only for first layer)
@@ -540,8 +540,6 @@ class FlaxT5Attention(nn.Module):
                 if graph_mask is not None:
                     position_bias = position_bias + graph_mask
             attn_output, attn_weights = scaled_dot_product_attention_graph(query_states, key_states, value_states, receivers, senders, position_bias, self.dtype)
-
-
 
         # else:
         #     #Vanilla attention
