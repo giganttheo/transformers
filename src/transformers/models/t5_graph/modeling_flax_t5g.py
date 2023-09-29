@@ -490,7 +490,7 @@ class FlaxT5Attention(nn.Module):
                     )
                     # print("causal mask shape: ", causal_attention_mask.shape)
                     causal_attention_mask = jnp.broadcast_to(
-                        causal_attention_mask, (batch_size,) + self.n_heads + causal_attention_mask.shape[2:]
+                        causal_attention_mask, (batch_size,) + (self.n_heads,) + causal_attention_mask.shape[2:]
                     )
                     causal_mask = jax.vmap(jax.vmap(lambda mask, r,s: mask[r, s]))(causal_attention_mask, receivers, senders)
                 else:
