@@ -406,7 +406,11 @@ class FlaxT5Attention(nn.Module):
         else: #attention_mask is never None
             position_bias = jnp.zeros_like(attention_mask, dtype=self.dtype)
 
-        # if cache_is_filled:
+        if cache_is_filled:
+            position_bias = jax.lax.dynamic_slice(
+                position_bias,
+
+            )
             
         return position_bias
 
@@ -475,8 +479,12 @@ class FlaxT5Attention(nn.Module):
             )
 
             if self.causal:
-              causal_mask = receivers <= senders + causal_attention_mask_shift 
-              graph_mask = graph_mask * causal_mask
+                # fast decoding for generate requires special attention_mask
+                if self.has_variable("cache", "cached_key"):
+                    max_decoder_length = self.variables["cache"]["cached_key"].shape[1]
+                    causal_mask = receivers <= senders and not receivers < causal_attention_mask_shift and not senders > max_decoder_length
+                else:
+                    causal_mask = receivers <= senders
 
             # replace masked positions with -10_000
             mask_value = jnp.finfo(self.dtype).min
@@ -514,8 +522,13 @@ class FlaxT5Attention(nn.Module):
             )
 
             if self.causal:
-              causal_mask = receivers <= senders + causal_attention_mask_shift 
-              graph_mask = graph_mask * causal_mask
+                # fast decoding for generate requires special attention_mask
+                if self.has_variable("cache", "cached_key"):
+                    max_decoder_length = self.variables["cache"]["cached_key"].shape[1]
+                    causal_mask = receivers <= senders and not receivers < causal_attention_mask_shift and not senders > max_decoder_length
+                else:
+                    causal_mask = receivers <= senders
+            graph_mask = graph_mask * causal_mask
 
             # replace masked positions with -10_000
             mask_value = jnp.finfo(self.dtype).min
