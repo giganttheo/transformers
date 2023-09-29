@@ -407,10 +407,8 @@ class FlaxT5Attention(nn.Module):
             position_bias = jnp.zeros_like(attention_mask, dtype=self.dtype)
 
         if cache_is_filled:
-            position_bias = jax.lax.dynamic_slice(
-                position_bias,
-
-            )
+            max_decoder_length = self.variables["cache"]["cached_key"].shape[1]
+            position_bias = position_bias * ~(receivers < causal_attention_mask_shift) * ~(senders > max_decoder_length)
             
         return position_bias
 
