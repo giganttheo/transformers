@@ -478,9 +478,9 @@ class FlaxT5Attention(nn.Module):
 
             if self.causal:
                 # fast decoding for generate requires special attention_mask
-                if False:#self.has_variable("cache", "cached_key"):
+                if self.has_variable("cache", "cached_key"):
                     max_decoder_length = self.variables["cache"]["cached_key"].shape[1]
-                    causal_mask = (receivers <= senders) * ~(receivers >= causal_attention_mask_shift) * ~(senders < max_decoder_length)
+                    causal_mask = (receivers <= senders) * (receivers >= causal_attention_mask_shift) * (senders < max_decoder_length)
                 else:
                     causal_mask = receivers <= senders
                 graph_mask = graph_mask * causal_mask
