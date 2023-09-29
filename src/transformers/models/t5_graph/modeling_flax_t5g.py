@@ -480,7 +480,17 @@ class FlaxT5Attention(nn.Module):
                 # fast decoding for generate requires special attention_mask
                 if self.has_variable("cache", "cached_key"):
                     max_decoder_length = self.variables["cache"]["cached_key"].shape[1]
-                    causal_mask = (receivers <= senders) * (receivers >= causal_attention_mask_shift) * (senders < max_decoder_length)
+                    # causal_mask = (receivers <= senders) * (receivers >= causal_attention_mask_shift) * (senders < max_decoder_length)
+                    causal_attention_mask = make_causal_mask(attention_mask, dtype="bool")
+                    causal_attention_mask = jax.lax.dynamic_slice(
+                    causal_attention_mask,
+                    (0, 0, causal_attention_mask_shift, 0),
+                    (1, 1, seq_length, max_decoder_length),
+                    )
+                    causal_attention_mask = jnp.broadcast_to(
+                        causal_attention_mask, (batch_size,) + causal_attention_mask.shape[1:]
+                    )
+                    causal_mask = jax.vmap(jax.vmap(lambda r,s: causal_attention_mask[r, s]))(receivers, senders)
                 else:
                     causal_mask = receivers <= senders
                 graph_mask = graph_mask * causal_mask
