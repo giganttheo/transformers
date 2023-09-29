@@ -528,7 +528,7 @@ class FlaxT5Attention(nn.Module):
                     causal_mask = receivers <= senders and not receivers < causal_attention_mask_shift and not senders > max_decoder_length
                 else:
                     causal_mask = receivers <= senders
-            graph_mask = graph_mask * causal_mask
+                graph_mask = graph_mask * causal_mask
 
             # replace masked positions with -10_000
             mask_value = jnp.finfo(self.dtype).min
