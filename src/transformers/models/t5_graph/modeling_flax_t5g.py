@@ -408,8 +408,13 @@ class FlaxT5Attention(nn.Module):
 
         if cache_is_filled:
             max_decoder_length = self.variables["cache"]["cached_key"].shape[1]
-            position_bias = position_bias * ~(receivers < causal_attention_mask_shift) * ~(senders > max_decoder_length)
-            
+            # position_bias = jax.lax.dynamic_slice(
+            #     position_bias,
+            #     (0, 0, causal_attention_mask_shift, 0),
+            #     (1, self.n_heads, seq_length, max_decoder_length),
+            # )
+            #for some reason this seems like a good approximation (~99.3% the same in the tests)
+            position_bias = position_bias * ~(senders < max_decoder_length)  #TODO TODO TODO
         return position_bias
 
     def _create_position_bias(
@@ -426,7 +431,7 @@ class FlaxT5Attention(nn.Module):
         else:
             position_bias = jnp.zeros((1, self.n_heads, query_length, key_length), dtype=self.dtype)
 
-        # # if key and values are already calculated, only the last query position bias should be taken
+        # if key and values are already calculated, only the last query position bias should be taken
         if cache_is_filled:
             max_decoder_length = self.variables["cache"]["cached_key"].shape[1]
             position_bias = jax.lax.dynamic_slice(
@@ -484,9 +489,9 @@ class FlaxT5Attention(nn.Module):
                     #adapting the vanilla one (n2 memory)
                     causal_attention_mask = make_causal_mask(attention_mask, dtype="bool")
                     causal_attention_mask = jax.lax.dynamic_slice(
-                    causal_attention_mask,
-                    (0, 0, causal_attention_mask_shift, 0),
-                    (1, 1, seq_length, max_decoder_length),
+                        causal_attention_mask,
+                        (0, 0, causal_attention_mask_shift, 0),
+                        (1, 1, seq_length, max_decoder_length),
                     )
                     # print("causal mask shape: ", causal_attention_mask.shape)
                     causal_attention_mask = jnp.broadcast_to(
