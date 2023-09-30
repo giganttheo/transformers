@@ -506,7 +506,7 @@ class FlaxT5Attention(nn.Module):
                 graph_mask = graph_mask * causal_mask
 
             #merge attention mask with graph mask
-            attn_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids]), in_axes=(None, 0))
+            attn_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)))
             graph_mask = graph_mask * attn_mask_2_graph_mask(attention_mask, receivers) * attn_mask_2_graph_mask(attention_mask, senders) #TODO
 
             # replace masked positions with -10_000
