@@ -414,7 +414,7 @@ class FlaxT5Attention(nn.Module):
             #     (1, self.n_heads, seq_length, max_decoder_length),
             # )
             #for some reason this seems like a good approximation (~99.3% the same in the tests)
-            position_bias = position_bias * ~(senders < max_decoder_length)  #TODO TODO TODO
+            position_bias = position_bias * ~(receivers < max_decoder_length)  #TODO TODO TODO
         return position_bias
 
     def _create_position_bias(
