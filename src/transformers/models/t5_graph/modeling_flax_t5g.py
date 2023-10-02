@@ -358,7 +358,7 @@ class FlaxT5Attention(nn.Module):
         return hidden_states.reshape(hidden_states.shape[:2] + (self.inner_dim,))
 
     @nn.compact
-    def _concatenate_to_cache(self, key, value, query,attention_mask, receivers=None):
+    def _concatenate_to_cache(self, key, value, query, attention_mask, receivers=None):
         """
         This function takes projected key, value states from a single input token and concatenates the states to cached
         states from previous steps. This function is slighly adapted from the official Flax repository:
@@ -383,12 +383,13 @@ class FlaxT5Attention(nn.Module):
             cache_index.value = cache_index.value + num_updated_cache_vectors
             # causal mask for cached decoder self-attention: our single query position should only attend to those key positions
             # that have already been generated and cached, not the remaining zero elements.
-            if receivers is None:
+            if receivers is None or True:
                 pad_mask = jnp.broadcast_to(
                     jnp.arange(max_length) < cur_index + num_updated_cache_vectors,
                     tuple(batch_dims) + (1, num_updated_cache_vectors, max_length),
                 )
-                attention_mask = combine_masks(pad_mask, attention_mask)
+                # attention_mask = combine_masks(pad_mask, attention_mask)
+                attention_mask = pad_mask[receivers] * attention_mask
             else:
                 pad_mask = receivers < cur_index + num_updated_cache_vectors
                 attention_mask = pad_mask * attention_mask
@@ -487,27 +488,27 @@ class FlaxT5Attention(nn.Module):
                     max_decoder_length = self.variables["cache"]["cached_key"].shape[1]
 
                     # adapting the vanilla one (n2 memory)
-                    # causal_attention_mask = make_causal_mask(attention_mask, dtype="bool")
-                    # causal_attention_mask = jax.lax.dynamic_slice(
-                    #     causal_attention_mask,
-                    #     (0, 0, causal_attention_mask_shift, 0),
-                    #     (1, 1, seq_length, max_decoder_length),
-                    # )
-                    # # print("causal mask shape: ", causal_attention_mask.shape)
-                    # causal_attention_mask = jnp.broadcast_to(
-                    #     causal_attention_mask, (batch_size,) + (self.n_heads,) + causal_attention_mask.shape[2:]
-                    # )
-                    # causal_mask = jax.vmap(jax.vmap(lambda mask, r,s: mask[r, s]))(causal_attention_mask, receivers, senders)
+                    causal_attention_mask = make_causal_mask(attention_mask, dtype="bool")
+                    causal_attention_mask = jax.lax.dynamic_slice(
+                        causal_attention_mask,
+                        (0, 0, causal_attention_mask_shift, 0),
+                        (1, 1, seq_length, max_decoder_length),
+                    )
+                    # print("causal mask shape: ", causal_attention_mask.shape)
+                    causal_attention_mask = jnp.broadcast_to(
+                        causal_attention_mask, (batch_size,) + (self.n_heads,) + causal_attention_mask.shape[2:]
+                    )
+                    causal_mask = jax.vmap(jax.vmap(lambda mask, r,s: mask[r, s]))(causal_attention_mask, receivers, senders)
 
                     #for some reason this seems like a good approximation (~99.3% the same in the tests)
-                    causal_mask = (receivers <= senders) | ~(senders < max_decoder_length)
+                    # causal_mask = (receivers <= senders) | ~(senders < max_decoder_length)
                 else:
                     causal_mask = receivers <= senders
                 graph_mask = graph_mask * causal_mask
 
             #merge attention mask with graph mask
             attn_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)))
-            graph_mask = graph_mask * attn_mask_2_graph_mask(attention_mask, senders)# * attn_mask_2_graph_mask(attention_mask, senders) #TODO
+            graph_mask = graph_mask & attn_mask_2_graph_mask(attention_mask, receivers) & attn_mask_2_graph_mask(attention_mask, senders) #TODO
 
             # replace masked positions with -10_000
             mask_value = jnp.finfo(self.dtype).min
