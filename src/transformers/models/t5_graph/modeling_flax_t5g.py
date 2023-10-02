@@ -358,7 +358,7 @@ class FlaxT5Attention(nn.Module):
         return hidden_states.reshape(hidden_states.shape[:2] + (self.inner_dim,))
 
     @nn.compact
-    def _concatenate_to_cache(self, key, value, query, attention_mask, node_idx=None):
+    def _concatenate_to_cache(self, key, value, query, attention_mask):
         #node_idx can be either receivers or senders
         """
         This function takes projected key, value states from a single input token and concatenates the states to cached
@@ -384,8 +384,13 @@ class FlaxT5Attention(nn.Module):
             cache_index.value = cache_index.value + num_updated_cache_vectors
             # causal mask for cached decoder self-attention: our single query position should only attend to those key positions
             # that have already been generated and cached, not the remaining zero elements.
-            pad_mask = node_idx < cur_index + num_updated_cache_vectors
-            attention_mask = pad_mask * attention_mask
+            attention_mask = combine_masks(
+                                attention_mask,
+                                jnp.broadcast_to(
+                                    jnp.arange(max_length) < cur_index + num_updated_cache_vectors,
+                                    tuple(batch_dims) + (1, num_updated_cache_vectors, max_length),
+                                )
+            )
         return key, value, attention_mask
 
     def _create_position_bias_sparse(
@@ -499,9 +504,16 @@ class FlaxT5Attention(nn.Module):
                     causal_mask = receivers <= senders
                 graph_mask = graph_mask * causal_mask
 
+            # During fast autoregressive decoding, we feed one position at a time,
+            # and cache the keys and values step by step.
+            if self.causal and (self.has_variable("cache", "cached_key") or init_cache):
+                key_states, value_states, attention_mask = self._concatenate_to_cache(
+                    key_states, value_states, query_states, attention_mask,
+                )
+
             #merge attention mask with graph mask
             attn_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)))
-            graph_mask = graph_mask * attn_mask_2_graph_mask(attention_mask, receivers) * attn_mask_2_graph_mask(attention_mask, senders) #TODO
+            graph_mask = graph_mask * attn_mask_2_graph_mask(attention_mask, receivers) * attn_mask_2_graph_mask(attention_mask, senders)
 
             # replace masked positions with -10_000
             mask_value = jnp.finfo(self.dtype).min
@@ -510,13 +522,7 @@ class FlaxT5Attention(nn.Module):
                 jnp.full(graph_mask.shape, 0.0).astype(self.dtype),
                 jnp.full(graph_mask.shape, mask_value).astype(self.dtype),
             )
-            # During fast autoregressive decoding, we feed one position at a time,
-            # and cache the keys and values step by step.
-            if self.causal and (self.has_variable("cache", "cached_key") or init_cache):
-                # TODO check this
-                key_states, value_states, graph_mask = self._concatenate_to_cache(
-                    key_states, value_states, query_states, graph_mask, senders,#receivers
-                )
+
             if position_bias is None:
                 # compute position bias (only for first layer)
                 position_bias = self._create_position_bias_sparse(
@@ -558,8 +564,8 @@ class FlaxT5Attention(nn.Module):
             # and cache the keys and values step by step.
             if self.causal and (self.has_variable("cache", "cached_key") or init_cache):
                 # TODO check this
-                key_states, value_states, graph_mask = self._concatenate_to_cache(
-                    key_states, value_states, query_states, graph_mask, senders,#receivers
+                key_states, value_states, attention_mask = self._concatenate_to_cache(
+                    key_states, value_states, query_states, attention_mask,
                 )
             if position_bias is None:
                 # compute position bias (only for first layer)
