@@ -358,7 +358,8 @@ class FlaxT5Attention(nn.Module):
         return hidden_states.reshape(hidden_states.shape[:2] + (self.inner_dim,))
 
     @nn.compact
-    def _concatenate_to_cache(self, key, value, query, attention_mask, receivers=None):
+    def _concatenate_to_cache(self, key, value, query, attention_mask, node_idx=None):
+        #node_idx can be either receivers or senders
         """
         This function takes projected key, value states from a single input token and concatenates the states to cached
         states from previous steps. This function is slighly adapted from the official Flax repository:
@@ -383,16 +384,8 @@ class FlaxT5Attention(nn.Module):
             cache_index.value = cache_index.value + num_updated_cache_vectors
             # causal mask for cached decoder self-attention: our single query position should only attend to those key positions
             # that have already been generated and cached, not the remaining zero elements.
-            if receivers is None or True:
-                pad_mask = jnp.broadcast_to(
-                    jnp.arange(max_length) < cur_index + num_updated_cache_vectors,
-                    tuple(batch_dims) + (1, num_updated_cache_vectors, max_length),
-                )
-                # attention_mask = combine_masks(pad_mask, attention_mask)
-                attention_mask = pad_mask[receivers] * attention_mask
-            else:
-                pad_mask = receivers < cur_index + num_updated_cache_vectors
-                attention_mask = pad_mask * attention_mask
+            pad_mask = node_idx < cur_index + num_updated_cache_vectors
+            attention_mask = pad_mask * attention_mask
         return key, value, attention_mask
 
     def _create_position_bias_sparse(
