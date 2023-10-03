@@ -505,7 +505,7 @@ class FlaxT5Attention(nn.Module):
                     key_states, value_states, query_states,
                 )
                 if pad_mask is not None:
-                    graph_mask = graph_mask * jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)), in_axes=(None, 0))(pad_mask, receivers)
+                    graph_mask = graph_mask * jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)), in_axes=(None, 0))(pad_mask, senders)
 
             attn_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)))
             #merge attention mask with graph mask
@@ -557,7 +557,7 @@ class FlaxT5Attention(nn.Module):
                     key_states, value_states, query_states,
                 )
                 if pad_mask is not None:
-                    graph_mask = graph_mask * jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)), in_axes=(None, 0))(pad_mask, receivers)
+                    graph_mask = graph_mask * jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)), in_axes=(None, 0))(pad_mask, senders)
 
             attn_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)))
             #merge attention mask with graph mask
