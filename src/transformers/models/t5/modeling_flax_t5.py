@@ -1088,10 +1088,10 @@ class FlaxT5PreTrainedModel(FlaxPreTrainedModel):
         Example:
 
         ```python
-        >>> from transformers import AutoTokenizer, FlaxT5ForConditionalGeneration
+        >>> from transformers import AutoTokenizer, VFlaxT5ForConditionalGeneration
 
         >>> tokenizer = AutoTokenizer.from_pretrained("t5-small")
-        >>> model = FlaxT5ForConditionalGeneration.from_pretrained("t5-small")
+        >>> model = VFlaxT5ForConditionalGeneration.from_pretrained("t5-small")
 
         >>> text = "My friends are cool but they eat too many carbs."
         >>> inputs = tokenizer(text, return_tensors="np")
@@ -1149,11 +1149,11 @@ class FlaxT5PreTrainedModel(FlaxPreTrainedModel):
         Example:
 
         ```python
-        >>> from transformers import AutoTokenizer, FlaxT5ForConditionalGeneration
+        >>> from transformers import AutoTokenizer, VFlaxT5ForConditionalGeneration
         >>> import jax.numpy as jnp
 
         >>> tokenizer = AutoTokenizer.from_pretrained("t5-small")
-        >>> model = FlaxT5ForConditionalGeneration.from_pretrained("t5-small")
+        >>> model = VFlaxT5ForConditionalGeneration.from_pretrained("t5-small")
 
         >>> text = "My friends are cool but they eat too many carbs."
         >>> inputs = tokenizer(text, return_tensors="np")
@@ -1492,7 +1492,7 @@ class FlaxT5EncoderModel(FlaxT5PreTrainedModel):
 
 
 @add_start_docstrings("""T5 Model with a `language modeling` head on top.""", T5_START_DOCSTRING)
-class FlaxT5ForConditionalGenerationModule(nn.Module):
+class VFlaxT5ForConditionalGenerationModule(nn.Module):
     config: T5Config
     dtype: jnp.dtype = jnp.float32  # the dtype of the computation
     gradient_checkpointing: bool = False
@@ -1602,8 +1602,8 @@ class FlaxT5ForConditionalGenerationModule(nn.Module):
         )
 
 
-class FlaxT5ForConditionalGeneration(FlaxT5PreTrainedModel):
-    module_class = FlaxT5ForConditionalGenerationModule
+class VFlaxT5ForConditionalGeneration(FlaxT5PreTrainedModel):
+    module_class = VFlaxT5ForConditionalGenerationModule
 
     @add_start_docstrings(T5_DECODE_INPUTS_DOCSTRING)
     @replace_return_docstrings(output_type=FlaxCausalLMOutputWithCrossAttentions, config_class=T5Config)
@@ -1627,11 +1627,11 @@ class FlaxT5ForConditionalGeneration(FlaxT5PreTrainedModel):
         Example:
 
         ```python
-        >>> from transformers import AutoTokenizer, FlaxT5ForConditionalGeneration
+        >>> from transformers import AutoTokenizer, VFlaxT5ForConditionalGeneration
         >>> import jax.numpy as jnp
 
         >>> tokenizer = AutoTokenizer.from_pretrained("t5-small")
-        >>> model = FlaxT5ForConditionalGeneration.from_pretrained("t5-small")
+        >>> model = VFlaxT5ForConditionalGeneration.from_pretrained("t5-small")
 
         >>> text = "summarize: My friends are cool but they eat too many carbs."
         >>> inputs = tokenizer(text, return_tensors="np")
@@ -1776,10 +1776,10 @@ FLAX_T5_CONDITIONAL_GENERATION_DOCSTRING = """
     Example:
 
     ```python
-    >>> from transformers import AutoTokenizer, FlaxT5ForConditionalGeneration
+    >>> from transformers import AutoTokenizer, VFlaxT5ForConditionalGeneration
 
     >>> tokenizer = AutoTokenizer.from_pretrained("t5-small")
-    >>> model = FlaxT5ForConditionalGeneration.from_pretrained("t5-small")
+    >>> model = VFlaxT5ForConditionalGeneration.from_pretrained("t5-small")
 
     >>> ARTICLE_TO_SUMMARIZE = "summarize: My friends are cool but they eat too many carbs."
     >>> inputs = tokenizer([ARTICLE_TO_SUMMARIZE], return_tensors="np")
@@ -1792,8 +1792,8 @@ FLAX_T5_CONDITIONAL_GENERATION_DOCSTRING = """
 
 
 overwrite_call_docstring(
-    FlaxT5ForConditionalGeneration, T5_INPUTS_DOCSTRING + FLAX_T5_CONDITIONAL_GENERATION_DOCSTRING
+    VFlaxT5ForConditionalGeneration, T5_INPUTS_DOCSTRING + FLAX_T5_CONDITIONAL_GENERATION_DOCSTRING
 )
 append_replace_return_docstrings(
-    FlaxT5ForConditionalGeneration, output_type=FlaxSeq2SeqLMOutput, config_class=_CONFIG_FOR_DOC
+    VFlaxT5ForConditionalGeneration, output_type=FlaxSeq2SeqLMOutput, config_class=_CONFIG_FOR_DOC
 )
