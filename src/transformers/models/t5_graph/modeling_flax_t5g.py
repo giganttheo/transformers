@@ -369,7 +369,7 @@ class FlaxT5Attention(nn.Module):
         cached_key = self.variable("cache", "cached_key", jnp.zeros, key.shape, key.dtype)
         cached_value = self.variable("cache", "cached_value", jnp.zeros, value.shape, value.dtype)
         cache_index = self.variable("cache", "cache_index", lambda: jnp.array(0, dtype=jnp.int32))
-
+        causal_mask=None
         if is_initialized:
             *batch_dims, max_length, num_heads, depth_per_head = cached_key.value.shape
             # update key, value caches with our new 1d spatial slices
@@ -504,7 +504,8 @@ class FlaxT5Attention(nn.Module):
                 key_states, value_states, pad_mask = self._concatenate_to_cache(
                     key_states, value_states, query_states,
                 )
-                graph_mask = graph_mask * jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)), in_axes=(None, 0))(pad_mask, receivers)
+                if pad_mask is not None:
+                    graph_mask = graph_mask * jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)), in_axes=(None, 0))(pad_mask, receivers)
 
             attn_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)))
             #merge attention mask with graph mask
@@ -554,7 +555,8 @@ class FlaxT5Attention(nn.Module):
                 key_states, value_states, pad_mask = self._concatenate_to_cache(
                     key_states, value_states, query_states,
                 )
-                graph_mask = graph_mask * jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)), in_axes=(None, 0))(pad_mask, receivers)
+                if pad_mask is not None:
+                    graph_mask = graph_mask * jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)), in_axes=(None, 0))(pad_mask, receivers)
 
             attn_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)))
             #merge attention mask with graph mask
