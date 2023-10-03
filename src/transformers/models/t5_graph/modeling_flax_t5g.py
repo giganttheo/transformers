@@ -487,19 +487,19 @@ class FlaxT5Attention(nn.Module):
                 max_decoder_length = self.variables["cache"]["cached_key"].shape[1]
 
                 # # adapting the vanilla one (n2 memory)
-                # causal_attention_mask = make_causal_mask(attention_mask, dtype="bool")
-                # causal_attention_mask = jax.lax.dynamic_slice(
-                #     causal_attention_mask,
-                #     (0, 0, causal_attention_mask_shift, 0),
-                #     (1, 1, seq_length, max_decoder_length),
-                # )
-                # causal_attention_mask = jnp.broadcast_to(
-                #     causal_attention_mask, (batch_size,) + (self.n_heads,) + causal_attention_mask.shape[2:]
-                # )
-                # causal_mask = jax.vmap(jax.vmap(lambda mask, r,s: mask[r, s]))(causal_attention_mask, receivers, senders)
+                causal_attention_mask = make_causal_mask(attention_mask, dtype="bool")
+                causal_attention_mask = jax.lax.dynamic_slice(
+                    causal_attention_mask,
+                    (0, 0, causal_attention_mask_shift, 0),
+                    (1, 1, seq_length, max_decoder_length),
+                )
+                causal_attention_mask = jnp.broadcast_to(
+                    causal_attention_mask, (batch_size,) + (self.n_heads,) + causal_attention_mask.shape[2:]
+                )
+                causal_mask = jax.vmap(jax.vmap(lambda mask, r,s: mask[r, s]))(causal_attention_mask, receivers, senders)
 
                 #for some reason this seems like a good approximation (~99.3% the same in the tests)
-                causal_mask = (receivers <= senders) | ~(senders < max_decoder_length)
+                # causal_mask = (receivers <= senders) | ~(senders < max_decoder_length)
             else:
                 causal_mask = receivers <= senders
             graph_mask = graph_mask * causal_mask
