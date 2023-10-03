@@ -400,13 +400,14 @@ class FlaxT5Attention(nn.Module):
 
         if cache_is_filled:
             max_decoder_length = self.variables["cache"]["cached_key"].shape[1]
+            #position bias is of size (1, self.n_heads, query_length, key_length)
             # position_bias = jax.lax.dynamic_slice(
             #     position_bias,
             #     (0, 0, causal_attention_mask_shift, 0),
             #     (1, self.n_heads, seq_length, max_decoder_length),
             # )
             #for some reason this seems like a good approximation (~99.3% the same in the tests)
-            position_bias = position_bias * ( (receivers <= senders) | ~(senders < max_decoder_length))  #TODO TODO TODO
+            # position_bias = position_bias #( (receivers <= senders) | ~(senders < max_decoder_length))  #TODO TODO TODO
         return position_bias
 
     def _create_position_bias(
@@ -511,13 +512,16 @@ class FlaxT5Attention(nn.Module):
                 key_states, value_states, query_states,
             )
             if pad_mask is not None:
+                print("before pad_mask: ", graph_mask[0,0,:10]) #TODO
                 #causal cache mask to only attend to the tokens up to the current token
                 graph_mask = graph_mask * jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)), in_axes=(None, 0))(pad_mask, receivers) * jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)), in_axes=(None, 0))(pad_mask, senders)
+                print("after pad_mask: ", graph_mask[0,0,:10]) #TODO
 
         attn_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)))
         #merge attention mask with graph mask
         if attention_mask is not None:
-            graph_mask = graph_mask * attn_mask_2_graph_mask(attention_mask, senders) * attn_mask_2_graph_mask(attention_mask, senders)
+            graph_mask = graph_mask * attn_mask_2_graph_mask(attention_mask, receivers)
+            print("after attn_mask: ", graph_mask[0,0,:10]) #TODO
 
         # replace masked positions with -10_000
         mask_value = jnp.finfo(self.dtype).min
