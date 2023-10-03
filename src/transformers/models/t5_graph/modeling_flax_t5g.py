@@ -358,8 +358,7 @@ class FlaxT5Attention(nn.Module):
         return hidden_states.reshape(hidden_states.shape[:2] + (self.inner_dim,))
 
     @nn.compact
-    def _concatenate_to_cache(self, key, value, query, attention_mask):
-        #node_idx can be either receivers or senders
+    def _concatenate_to_cache(self, key, value, query):
         """
         This function takes projected key, value states from a single input token and concatenates the states to cached
         states from previous steps. This function is slighly adapted from the official Flax repository:
@@ -384,8 +383,8 @@ class FlaxT5Attention(nn.Module):
             cache_index.value = cache_index.value + num_updated_cache_vectors
             # causal mask for cached decoder self-attention: our single query position should only attend to those key positions
             # that have already been generated and cached, not the remaining zero elements.
-            attention_mask = jnp.arange(max_length) < cur_index + num_updated_cache_vectors
-        return key, value, attention_mask
+            causal_mask = jnp.arange(max_length) < cur_index + num_updated_cache_vectors
+        return key, value, causal_mask
 
     def _create_position_bias_sparse(
         self, key_states, query_states, attention_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift
@@ -503,8 +502,9 @@ class FlaxT5Attention(nn.Module):
             # During fast autoregressive decoding, we feed one position at a time,
             # and cache the keys and values step by step.
             if self.causal and (self.has_variable("cache", "cached_key") or init_cache):
+                print("key states shape: ", key_states.shape) #TODO
                 key_states, value_states, pad_mask = self._concatenate_to_cache(
-                    key_states, value_states, query_states, attention_mask,
+                    key_states, value_states, query_states,
                 )
                 graph_mask = graph_mask * jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)), in_axes=(None, 0))(pad_mask, receivers)
 
