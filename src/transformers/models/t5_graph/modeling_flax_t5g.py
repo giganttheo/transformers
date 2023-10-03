@@ -503,7 +503,7 @@ class FlaxT5Attention(nn.Module):
                 #causal_mask = (receivers <= senders) | ~(senders < max_decoder_length)
 
                 #test
-                causal_mask = (receivers <= senders) & (senders >= causal_attention_mask_shift) & (receivers < max_decoder_length) & (senders < seq_length)
+                causal_mask = (receivers <= senders)# & (senders >= causal_attention_mask_shift) & (receivers < max_decoder_length) & (senders < seq_length)
             else:
                 causal_mask = receivers <= senders
             graph_mask = graph_mask * causal_mask
