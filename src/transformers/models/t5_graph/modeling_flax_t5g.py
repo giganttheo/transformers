@@ -399,15 +399,15 @@ class FlaxT5Attention(nn.Module):
             position_bias = jnp.zeros_like(attention_mask, dtype=self.dtype)
 
         # if key and values are already calculated, only the last query position bias should be taken
-        if cache_is_filled:
-            max_decoder_length = self.variables["cache"]["cached_key"].shape[1]
-            #position bias is of size (1, self.n_heads, query_length, key_length)
-            # position_bias = jax.lax.dynamic_slice(
-            #     position_bias,
-            #     (0, 0, causal_attention_mask_shift, 0),
-            #     (1, self.n_heads, seq_length, max_decoder_length),
-            # )
-            # position_bias = position_bias * (receivers >= causal_attention_mask_shift)  #TODO TODO TODO
+        # if cache_is_filled:
+        #     # max_decoder_length = self.variables["cache"]["cached_key"].shape[1]
+        #     #position bias is of size (1, self.n_heads, query_length, key_length)
+        #     # position_bias = jax.lax.dynamic_slice(
+        #     #     position_bias,
+        #     #     (0, 0, causal_attention_mask_shift, 0),
+        #     #     (1, self.n_heads, seq_length, max_decoder_length),
+        #     # )
+        #     # position_bias = position_bias * (receivers >= causal_attention_mask_shift)  #TODO TODO TODO
         return position_bias
 
     def _create_position_bias(
@@ -486,20 +486,20 @@ class FlaxT5Attention(nn.Module):
             if self.has_variable("cache", "cached_key"):
                 max_decoder_length = self.variables["cache"]["cached_key"].shape[1]
 
-                # adapting the vanilla one (n2 memory)
-                causal_attention_mask = make_causal_mask(attention_mask, dtype="bool")
-                causal_attention_mask = jax.lax.dynamic_slice(
-                    causal_attention_mask,
-                    (0, 0, causal_attention_mask_shift, 0),
-                    (1, 1, seq_length, max_decoder_length),
-                )
-                causal_attention_mask = jnp.broadcast_to(
-                    causal_attention_mask, (batch_size,) + (self.n_heads,) + causal_attention_mask.shape[2:]
-                )
-                causal_mask = jax.vmap(jax.vmap(lambda mask, r,s: mask[r, s]))(causal_attention_mask, receivers, senders)
+                # # adapting the vanilla one (n2 memory)
+                # causal_attention_mask = make_causal_mask(attention_mask, dtype="bool")
+                # causal_attention_mask = jax.lax.dynamic_slice(
+                #     causal_attention_mask,
+                #     (0, 0, causal_attention_mask_shift, 0),
+                #     (1, 1, seq_length, max_decoder_length),
+                # )
+                # causal_attention_mask = jnp.broadcast_to(
+                #     causal_attention_mask, (batch_size,) + (self.n_heads,) + causal_attention_mask.shape[2:]
+                # )
+                # causal_mask = jax.vmap(jax.vmap(lambda mask, r,s: mask[r, s]))(causal_attention_mask, receivers, senders)
 
                 #for some reason this seems like a good approximation (~99.3% the same in the tests)
-                # causal_mask = (receivers <= senders) | ~(senders < max_decoder_length)
+                causal_mask = (receivers <= senders) | ~(senders < max_decoder_length)
             else:
                 causal_mask = receivers <= senders
             graph_mask = graph_mask * causal_mask
