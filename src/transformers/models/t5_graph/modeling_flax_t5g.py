@@ -384,7 +384,7 @@ class FlaxT5Attention(nn.Module):
             cache_index.value = cache_index.value + num_updated_cache_vectors
             # causal mask for cached decoder self-attention: our single query position should only attend to those key positions
             # that have already been generated and cached, not the remaining zero elements.
-            attention_mask = attention_mask * (jnp.arange(max_length) < cur_index + num_updated_cache_vectors)
+            attention_mask = jnp.arange(max_length) < cur_index + num_updated_cache_vectors
         return key, value, attention_mask
 
     def _create_position_bias_sparse(
