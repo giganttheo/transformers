@@ -517,7 +517,7 @@ class FlaxT5Attention(nn.Module):
             key_states, value_states, pad_mask = self._concatenate_to_cache(
                 key_states, value_states, query_states,
             )
-            pad_mask=None #TODO: is the typo from the original code relevant here?
+            # pad_mask=None #TODO: is the typo from the original code relevant here?
             if pad_mask is not None:
                 #causal cache mask to only attend to the tokens up to the current token
                 pad_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)), in_axes=(None, 0))
@@ -544,8 +544,8 @@ class FlaxT5Attention(nn.Module):
 
             if graph_mask is not None:
                 position_bias = position_bias + graph_mask
-        attn_output, attn_weights = scaled_dot_product_attention_graph(query_states, key_states, value_states, receivers, senders, position_bias, self.dtype)
 
+        attn_output, attn_weights = scaled_dot_product_attention_graph(query_states, key_states, value_states, receivers, senders, position_bias, self.dtype)
 
         # bring back to (batch_size, seq_length, d_model)
         attn_output = self._merge_heads(attn_output)
