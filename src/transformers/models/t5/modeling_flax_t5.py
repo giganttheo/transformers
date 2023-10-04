@@ -428,7 +428,8 @@ class FlaxT5Attention(nn.Module):
                 position_bias = position_bias + attention_mask
 
         if self.has_variable("cache", "cached_key"):
-            # print(position_bias[0, 0, :10, :10])  #TODO
+            # print(position_bias[0, 0, :10, :10])  #
+            pass
 
         # create dropout rng
         dropout_rng = None
