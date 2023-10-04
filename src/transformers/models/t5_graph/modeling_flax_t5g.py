@@ -399,15 +399,16 @@ class FlaxT5Attention(nn.Module):
             position_bias = jnp.zeros_like(attention_mask, dtype=self.dtype)
 
         # if key and values are already calculated, only the last query position bias should be taken
-        # if cache_is_filled:
-        #     # max_decoder_length = self.variables["cache"]["cached_key"].shape[1]
-        #     #position bias is of size (1, self.n_heads, query_length, key_length)
-        #     # position_bias = jax.lax.dynamic_slice(
-        #     #     position_bias,
-        #     #     (0, 0, causal_attention_mask_shift, 0),
-        #     #     (1, self.n_heads, seq_length, max_decoder_length),
-        #     # )
-        #     # position_bias = position_bias * (receivers >= causal_attention_mask_shift)  #TODO TODO TODO
+        if cache_is_filled:
+            max_decoder_length = self.variables["cache"]["cached_key"].shape[1]
+            position_bias = position_bias * ((senders >= causal_attention_mask_shift) & (senders < seq_length + causal_attention_mask_shift) & (receivers < max_decoder_length))
+            #position bias is of size (1, self.n_heads, query_length, key_length)
+            # position_bias = jax.lax.dynamic_slice(
+            #     position_bias,
+            #     (0, 0, causal_attention_mask_shift, 0),
+            #     (1, self.n_heads, seq_length, max_decoder_length),
+            # )
+            # position_bias = position_bias * (receivers >= causal_attention_mask_shift)  #TODO TODO TODO
         return position_bias
 
     def _create_position_bias(
