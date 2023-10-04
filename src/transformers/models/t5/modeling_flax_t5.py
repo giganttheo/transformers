@@ -409,6 +409,10 @@ class FlaxT5Attention(nn.Module):
                 key_states, value_states, query_states, attention_mask
             )
 
+        if self.has_variable("cache", "cached_key"):
+            print(attention_mask[0, 0, :10, :10])  #
+            # pass
+
         # replace masked positions with -10_000
         if attention_mask is not None:
             mask_value = jnp.finfo(self.dtype).min
@@ -427,9 +431,6 @@ class FlaxT5Attention(nn.Module):
             if attention_mask is not None:
                 position_bias = position_bias + attention_mask
 
-        if self.has_variable("cache", "cached_key"):
-            # print(position_bias[0, 0, :10, :10])  #
-            pass
 
         # create dropout rng
         dropout_rng = None

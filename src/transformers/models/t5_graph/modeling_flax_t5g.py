@@ -530,6 +530,10 @@ class FlaxT5Attention(nn.Module):
         if attention_mask is not None:
             graph_mask = graph_mask * attn_mask_2_graph_mask(attention_mask, receivers)
 
+        if self.has_variable("cache", "cached_key"):
+            print(graph_mask[0, 0, :100]) #TODO
+            # pass
+
         # replace masked positions with -10_000
         mask_value = jnp.finfo(self.dtype).min
         graph_mask = jax.lax.select(
@@ -537,6 +541,7 @@ class FlaxT5Attention(nn.Module):
             jnp.full(graph_mask.shape, 0.0).astype(self.dtype),
             jnp.full(graph_mask.shape, mask_value).astype(self.dtype),
         )
+
 
         if position_bias is None:
             # compute position bias (only for first layer)
@@ -546,10 +551,6 @@ class FlaxT5Attention(nn.Module):
 
             if graph_mask is not None:
                 position_bias = position_bias + graph_mask
-
-        if self.has_variable("cache", "cached_key"):
-            # print(position_bias[0, 0, :100]) #TODO
-            pass
 
         attn_output, attn_weights = scaled_dot_product_attention_graph(query_states, key_states, value_states, receivers, senders, position_bias, self.dtype)
 
