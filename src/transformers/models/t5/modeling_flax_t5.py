@@ -427,6 +427,9 @@ class FlaxT5Attention(nn.Module):
             if attention_mask is not None:
                 position_bias = position_bias + attention_mask
 
+        if self.has_variable("cache", "cached_key"):
+            print(position_bias[0, 0]) #TODO
+
         # create dropout rng
         dropout_rng = None
         if not deterministic and self.dropout > 0.0:
