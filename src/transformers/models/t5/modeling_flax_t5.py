@@ -398,7 +398,7 @@ class FlaxT5Attention(nn.Module):
             attention_mask = jnp.broadcast_to(
                 jnp.expand_dims(attention_mask, axis=(-3, -2)), causal_attention_mask.shape
             )
-            attention_mask = combine_masks(attention_mask, causal_attention_mask)
+            # attention_mask = combine_masks(attention_mask, causal_attention_mask)
         elif attention_mask is not None:
             attention_mask = jnp.expand_dims(attention_mask, axis=(-3, -2))
 
@@ -416,11 +416,11 @@ class FlaxT5Attention(nn.Module):
         # replace masked positions with -10_000
         if attention_mask is not None:
             mask_value = jnp.finfo(self.dtype).min
-            attention_mask = jax.lax.select(
-                attention_mask > 0,
-                jnp.full(attention_mask.shape, 0.0).astype(self.dtype),
-                jnp.full(attention_mask.shape, mask_value).astype(self.dtype),
-            )
+            # attention_mask = jax.lax.select(
+            #     attention_mask > 0,
+            #     jnp.full(attention_mask.shape, 0.0).astype(self.dtype),
+            #     jnp.full(attention_mask.shape, mask_value).astype(self.dtype),
+            # )
 
         if position_bias is None:
             # compute position bias (only for first layer)

@@ -511,7 +511,7 @@ class FlaxT5Attention(nn.Module):
 
             else:
                 causal_mask = receivers <= senders
-            graph_mask = graph_mask * causal_mask
+            # graph_mask = graph_mask * causal_mask
 
         # During fast autoregressive decoding, we feed one position at a time,
         # and cache the keys and values step by step.
@@ -536,12 +536,12 @@ class FlaxT5Attention(nn.Module):
         #     # pass
 
         # replace masked positions with -10_000
-        mask_value = jnp.finfo(self.dtype).min
-        graph_mask = jax.lax.select(
-            graph_mask > 0,
-            jnp.full(graph_mask.shape, 0.0).astype(self.dtype),
-            jnp.full(graph_mask.shape, mask_value).astype(self.dtype),
-        )
+        # mask_value = jnp.finfo(self.dtype).min
+        # graph_mask = jax.lax.select(
+        #     graph_mask > 0,
+        #     jnp.full(graph_mask.shape, 0.0).astype(self.dtype),
+        #     jnp.full(graph_mask.shape, mask_value).astype(self.dtype),
+        # )
 
 
         if position_bias is None:
