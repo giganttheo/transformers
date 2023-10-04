@@ -408,7 +408,7 @@ class FlaxT5Attention(nn.Module):
             #     (0, 0, causal_attention_mask_shift, 0),
             #     (1, self.n_heads, seq_length, max_decoder_length),
             # )
-            # position_bias = position_bias * (receivers >= causal_attention_mask_shift)  #TODO TODO TODO
+            position_bias = position_bias * (receivers >= causal_attention_mask_shift) * (receivers <= senders)  #TODO TODO TODO
         return position_bias
 
     def _create_position_bias(
@@ -553,7 +553,7 @@ class FlaxT5Attention(nn.Module):
                 position_bias = position_bias + graph_mask
 
         if self.has_variable("cache", "cached_key"):
-            print(position_bias[0, 0, senders[0,0,:100]]) #TODO
+            print(position_bias[0, 0, senders[0,0,:10]]) #TODO
             # pass
 
         attn_output, attn_weights = scaled_dot_product_attention_graph(query_states, key_states, value_states, receivers, senders, position_bias, self.dtype)
