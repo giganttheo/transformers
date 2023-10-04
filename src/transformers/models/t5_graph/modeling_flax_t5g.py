@@ -531,7 +531,7 @@ class FlaxT5Attention(nn.Module):
             graph_mask = graph_mask * attn_mask_2_graph_mask(attention_mask, receivers)
 
         if self.has_variable("cache", "cached_key"):
-            print(graph_mask[0, 0, receivers[0,0,:100]]) #TODO
+            print(graph_mask[0, 0, senders[0,0,:100]]) #TODO
             # pass
 
         # replace masked positions with -10_000
