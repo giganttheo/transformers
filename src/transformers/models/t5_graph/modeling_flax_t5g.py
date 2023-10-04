@@ -401,7 +401,7 @@ class FlaxT5Attention(nn.Module):
         # if key and values are already calculated, only the last query position bias should be taken
         if cache_is_filled:
             max_decoder_length = self.variables["cache"]["cached_key"].shape[1]
-            position_bias = position_bias * ((senders >= causal_attention_mask_shift) & (senders < seq_length + causal_attention_mask_shift) & (receivers < max_decoder_length))
+            position_bias = position_bias * ( (receivers <= senders) & (senders >= causal_attention_mask_shift) & (senders < seq_length + causal_attention_mask_shift) & (receivers < max_decoder_length))
             #position bias is of size (1, self.n_heads, query_length, key_length)
             # position_bias = jax.lax.dynamic_slice(
             #     position_bias,
@@ -504,10 +504,9 @@ class FlaxT5Attention(nn.Module):
                 #causal_mask = (receivers <= senders) | ~(senders < max_decoder_length)
                 # causal_mask = receivers <= senders
                 #logically this should work
+                
                 causal_mask = (receivers <= senders) & (senders >= causal_attention_mask_shift) & (senders < seq_length + causal_attention_mask_shift) & (receivers < max_decoder_length)
 
-                #test
-                # causal_mask = (receivers <= senders)# & (senders >= causal_attention_mask_shift) & (receivers < max_decoder_length) & (senders < seq_length)
             else:
                 causal_mask = receivers <= senders
             graph_mask = graph_mask * causal_mask
