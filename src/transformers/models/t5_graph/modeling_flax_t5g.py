@@ -530,6 +530,7 @@ class FlaxT5Attention(nn.Module):
         if attention_mask is not None:
             graph_mask = graph_mask * attn_mask_2_graph_mask(attention_mask, receivers)
 
+
         # if self.has_variable("cache", "cached_key"):
         #     print(graph_mask[0, 0, senders[0,0,:100]]) #TODO
         #     # pass
@@ -549,8 +550,11 @@ class FlaxT5Attention(nn.Module):
                 key_states, query_states, graph_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift
             )
 
+            # if graph_mask is not None:
+            #     position_bias = position_bias + graph_mask
+            
             if graph_mask is not None:
-                position_bias = position_bias + graph_mask
+                position_bias = graph_mask
 
         if self.has_variable("cache", "cached_key"):
             print(position_bias[0, 0, senders[0,0,:10]]) #TODO
