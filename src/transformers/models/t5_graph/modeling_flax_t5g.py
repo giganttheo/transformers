@@ -445,7 +445,7 @@ class FlaxT5Attention(nn.Module):
         else:
             position_bias = jnp.zeros((1, self.n_heads, query_length, key_length), dtype=self.dtype)
 
-        print(f"shape b4: {position_bias.shape}")
+        # print(f"shape b4: {position_bias.shape}")
 
         # if key and values are already calculated, only the last query position bias should be taken
         if cache_is_filled:
@@ -455,7 +455,7 @@ class FlaxT5Attention(nn.Module):
                 (0, 0, causal_attention_mask_shift, 0),
                 (1, self.n_heads, seq_length, max_decoder_length),
             )
-            print(f"shape after: {position_bias.shape}")
+            # print(f"shape after: {position_bias.shape}")
         return position_bias
 
     def __call__(
@@ -591,13 +591,13 @@ class FlaxT5Attention(nn.Module):
 
         if position_bias is None:
             # compute position bias (only for first layer)
-            position_bias = self._create_position_bias_sparse(
-                key_states, query_states, graph_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift
-            )
-
-            # position_bias = self._create_position_bias(
-            #     key_states, query_states, attention_mask, init_cache, seq_length, causal_attention_mask_shift
+            # position_bias = self._create_position_bias_sparse(
+            #     key_states, query_states, graph_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift
             # )
+
+            position_bias = self._create_position_bias(
+                key_states, query_states, attention_mask, init_cache, seq_length, causal_attention_mask_shift
+            )
 
             if graph_mask is not None:
                 # position_bias = position_bias + graph_mask
