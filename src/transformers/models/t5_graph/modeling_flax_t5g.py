@@ -518,7 +518,7 @@ class FlaxT5Attention(nn.Module):
             key_states, value_states, pad_mask = self._concatenate_to_cache(
                 key_states, value_states, query_states,
             )
-            # pad_mask=None #TODO: is the typo from the original code relevant here?
+            pad_mask=None #TODO: is the typo from the original code relevant here?
             if pad_mask is not None:
                 #causal cache mask to only attend to the tokens up to the current token
                 pad_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)), in_axes=(None, 0))
@@ -526,21 +526,20 @@ class FlaxT5Attention(nn.Module):
 
         attn_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)))
         #merge attention mask with graph mask
-        if attention_mask is not None:
-            graph_mask = graph_mask * attn_mask_2_graph_mask(attention_mask, receivers) * attn_mask_2_graph_mask(attention_mask, receivers)
+        # if attention_mask is not None:
+        #     graph_mask = graph_mask * attn_mask_2_graph_mask(attention_mask, receivers) * attn_mask_2_graph_mask(attention_mask, receivers)
 
         # if self.has_variable("cache", "cached_key"):
         #     print(graph_mask[0, 0, senders[0,0,:100]]) #TODO
         #     # pass
 
         # replace masked positions with -10_000
-        mask_value = jnp.finfo(self.dtype).min
-        graph_mask = jax.lax.select(
-            graph_mask > 0,
-            jnp.full(graph_mask.shape, 0.0).astype(self.dtype),
-            jnp.full(graph_mask.shape, mask_value).astype(self.dtype),
-        )
-
+        # mask_value = jnp.finfo(self.dtype).min
+        # graph_mask = jax.lax.select(
+        #     graph_mask > 0,
+        #     jnp.full(graph_mask.shape, 0.0).astype(self.dtype),
+        #     jnp.full(graph_mask.shape, mask_value).astype(self.dtype),
+        # )
 
         if position_bias is None:
             # compute position bias (only for first layer)
@@ -549,11 +548,8 @@ class FlaxT5Attention(nn.Module):
             )
 
             if graph_mask is not None:
-                position_bias = position_bias # + graph_mask
+                position_bias = position_bias# + graph_mask
             
-            if graph_mask is not None:
-                position_bias = graph_mask
-
         # if self.has_variable("cache", "cached_key"):
         #     print(position_bias[0, 0, senders[0,0,:10]]) #TODO
         #     # pass
