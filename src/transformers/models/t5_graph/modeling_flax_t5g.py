@@ -409,7 +409,8 @@ class FlaxT5Attention(nn.Module):
         # if key and values are already calculated, only the last query position bias should be taken
         if cache_is_filled:
             max_decoder_length = self.variables["cache"]["cached_key"].shape[1]
-            s_ = jnp.full(causal_attention_mask_shift, s_.shape) #intended for 1 token at a time only
+            #this is intended to reproduce the dynamic_slice + broadcast_to combo
+            s_ = jnp.full(causal_attention_mask_shift, senders.shape) #intended for 1 token at a time only
             position_bias = self.compute_bias_sparse(query_length, key_length, receivers, s_)
             # 0.17, 1.01, 0.28 also
             # position_bias = position_bias * ((senders >= causal_attention_mask_shift) & (senders < seq_length + causal_attention_mask_shift) & (receivers < max_decoder_length))
