@@ -522,7 +522,7 @@ class FlaxT5Attention(nn.Module):
             if pad_mask is not None:
                 #causal cache mask to only attend to the tokens up to the current token
                 pad_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)), in_axes=(None, 0))
-                graph_mask = graph_mask * pad_mask_2_graph_mask(pad_mask, receivers) #TODO
+                graph_mask = graph_mask * pad_mask_2_graph_mask(pad_mask, receivers) #WORKS !!!
 
         attn_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)))
         #merge attention mask with graph mask
@@ -548,8 +548,8 @@ class FlaxT5Attention(nn.Module):
                 key_states, query_states, graph_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift
             )
 
-            # if graph_mask is not None:
-            #     position_bias = position_bias + graph_mask
+            if graph_mask is not None:
+                position_bias = position_bias + graph_mask
             
             if graph_mask is not None:
                 position_bias = graph_mask
