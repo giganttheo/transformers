@@ -535,6 +535,7 @@ class FlaxT5Attention(nn.Module):
                 causal_mask = receivers <= senders
             graph_mask = graph_mask * causal_mask
 
+        tmp_attn_mask = attention_mask
 
         ##TMP TODO TODO (vanilla stuff)
         if self.causal:
@@ -574,8 +575,12 @@ class FlaxT5Attention(nn.Module):
 
         attn_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)))
         #merge attention mask with graph mask
-        if attention_mask is not None:
-            graph_mask = graph_mask * attn_mask_2_graph_mask(attention_mask, receivers) * attn_mask_2_graph_mask(attention_mask, receivers)
+        # if attention_mask is not None:
+        #     graph_mask = graph_mask * attn_mask_2_graph_mask(attention_mask, receivers) * attn_mask_2_graph_mask(attention_mask, receivers)
+        if tmp_attn_mask is not None:
+            graph_mask = graph_mask * attn_mask_2_graph_mask(tmp_attn_mask, receivers) * attn_mask_2_graph_mask(tmp_attn_mask, receivers)
+
+
 
         # if self.has_variable("cache", "cached_key"):
         #     print(graph_mask[0, 0, senders[0,0,:100]]) #TODO
