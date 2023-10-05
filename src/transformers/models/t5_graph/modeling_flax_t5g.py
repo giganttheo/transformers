@@ -560,51 +560,50 @@ class FlaxT5Attention(nn.Module):
         elif attention_mask is not None:
             attention_mask = jnp.expand_dims(attention_mask, axis=(-3, -2))
 
-
         # During fast autoregressive decoding, we feed one position at a time,
         # and cache the keys and values step by step.
         if self.causal and (self.has_variable("cache", "cached_key") or init_cache):
             key_states, value_states, pad_mask, attention_mask = self._concatenate_to_cache(
                 key_states, value_states, query_states, attention_mask
             )
-            pad_mask=None #TODO: is the typo from the original code relevant here?
+            # pad_mask=None #TODO: is the typo from the original code relevant here?
             if pad_mask is not None:
                 #causal cache mask to only attend to the tokens up to the current token
                 pad_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)), in_axes=(None, 0))
                 graph_mask = graph_mask * pad_mask_2_graph_mask(pad_mask, receivers) #WORKS !!!
 
-        # attn_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)))
+        attn_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)))
         #merge attention mask with graph mask
-        # if attention_mask is not None:
-        #     graph_mask = graph_mask * attn_mask_2_graph_mask(attention_mask, receivers) * attn_mask_2_graph_mask(attention_mask, receivers)
+        if attention_mask is not None:
+            graph_mask = graph_mask * attn_mask_2_graph_mask(attention_mask, receivers) * attn_mask_2_graph_mask(attention_mask, receivers)
 
         # if self.has_variable("cache", "cached_key"):
         #     print(graph_mask[0, 0, senders[0,0,:100]]) #TODO
         #     # pass
 
         # replace masked positions with -10_000
-        # mask_value = jnp.finfo(self.dtype).min
-        # graph_mask = jax.lax.select(
-        #     graph_mask > 0,
-        #     jnp.full(graph_mask.shape, 0.0).astype(self.dtype),
-        #     jnp.full(graph_mask.shape, mask_value).astype(self.dtype),
-        # )
+        mask_value = jnp.finfo(self.dtype).min
+        graph_mask = jax.lax.select(
+            graph_mask > 0,
+            jnp.full(graph_mask.shape, 0.0).astype(self.dtype),
+            jnp.full(graph_mask.shape, mask_value).astype(self.dtype),
+        )
 
         if position_bias is None:
             # compute position bias (only for first layer)
-            # position_bias = self._create_position_bias_sparse(
-            #     key_states, query_states, graph_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift
-            # )
-
-            position_bias = self._create_position_bias(
-                key_states, query_states, attention_mask, init_cache, seq_length, causal_attention_mask_shift
+            position_bias = self._create_position_bias_sparse(
+                key_states, query_states, graph_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift
             )
 
+            # position_bias = self._create_position_bias(
+            #     key_states, query_states, attention_mask, init_cache, seq_length, causal_attention_mask_shift
+            # )
+
             if graph_mask is not None:
-                # position_bias = position_bias # + graph_mask
+                # position_bias = position_bias + graph_mask
                 position_bias = jnp.broadcast_to(position_bias, (batch_size, self.n_heads,) + position_bias.shape[-2:])
                 causal_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, r, s: mask[s, r]))
-                position_bias = causal_mask_2_graph_mask(position_bias, receivers, senders)
+                position_bias = causal_mask_2_graph_mask(position_bias, receivers, senders) + graph_mask
             
         # if self.has_variable("cache", "cached_key"):
         #     print(position_bias[0, 0, senders[0,0,:10]]) #TODO
