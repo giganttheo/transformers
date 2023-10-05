@@ -591,7 +591,7 @@ class FlaxT5Attention(nn.Module):
 
             if graph_mask is not None:
                 # position_bias = position_bias # + graph_mask
-                causal_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, r, s: mask[r, s]))#, in_axes=(None,0, 0)))
+                causal_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, r, s: mask[r, s], in_axes=(None,0, 0)))
                 position_bias = causal_mask_2_graph_mask(position_bias, receivers, senders)
             
         # if self.has_variable("cache", "cached_key"):
