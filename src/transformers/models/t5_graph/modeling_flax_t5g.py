@@ -410,7 +410,7 @@ class FlaxT5Attention(nn.Module):
         if cache_is_filled:
             max_decoder_length = self.variables["cache"]["cached_key"].shape[1]
             # 0.17, 1.01, 0.28 also
-            # position_bias = position_bias * ( (receivers <= senders) & (senders >= causal_attention_mask_shift) & (senders < seq_length + causal_attention_mask_shift) & (receivers < max_decoder_length))
+            position_bias = position_bias * ((senders >= causal_attention_mask_shift) & (senders < seq_length + causal_attention_mask_shift) & (receivers < max_decoder_length))
             #position bias is of size (1, self.n_heads, query_length, key_length)
             # position_bias = jax.lax.dynamic_slice(
             #     position_bias,
@@ -445,14 +445,17 @@ class FlaxT5Attention(nn.Module):
         else:
             position_bias = jnp.zeros((1, self.n_heads, query_length, key_length), dtype=self.dtype)
 
+        print(f"shape b4: {position_bias.shape}")
+
         # if key and values are already calculated, only the last query position bias should be taken
-        # if cache_is_filled:
-        #     max_decoder_length = self.variables["cache"]["cached_key"].shape[1]
-        #     position_bias = jax.lax.dynamic_slice(
-        #         position_bias,
-        #         (0, 0, causal_attention_mask_shift, 0),
-        #         (1, self.n_heads, seq_length, max_decoder_length),
-        #     )
+        if cache_is_filled:
+            max_decoder_length = self.variables["cache"]["cached_key"].shape[1]
+            position_bias = jax.lax.dynamic_slice(
+                position_bias,
+                (0, 0, causal_attention_mask_shift, 0),
+                (1, self.n_heads, seq_length, max_decoder_length),
+            )
+            print(f"shape after: {position_bias.shape}")
         return position_bias
 
     def __call__(
@@ -589,19 +592,19 @@ class FlaxT5Attention(nn.Module):
 
         if position_bias is None:
             # compute position bias (only for first layer)
-            # position_bias = self._create_position_bias_sparse(
-            #     key_states, query_states, graph_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift
-            # )
-
-            position_bias = self._create_position_bias(
-                key_states, query_states, attention_mask, init_cache, seq_length, causal_attention_mask_shift
+            position_bias = self._create_position_bias_sparse(
+                key_states, query_states, graph_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift
             )
 
+            # position_bias = self._create_position_bias(
+            #     key_states, query_states, attention_mask, init_cache, seq_length, causal_attention_mask_shift
+            # )
+
             if graph_mask is not None:
-                # position_bias = position_bias # + graph_mask
-                position_bias = jnp.broadcast_to(position_bias, (batch_size, self.n_heads,) + position_bias.shape[-2:])
-                causal_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, r, s: mask[s, r]))
-                position_bias = causal_mask_2_graph_mask(position_bias, receivers, senders)
+                position_bias = position_bias # + graph_mask
+                # position_bias = jnp.broadcast_to(position_bias, (batch_size, self.n_heads,) + position_bias.shape[-2:])
+                # causal_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, r, s: mask[s, r]))
+                # position_bias = causal_mask_2_graph_mask(position_bias, receivers, senders)
             
         # if self.has_variable("cache", "cached_key"):
         #     print(position_bias[0, 0, senders[0,0,:10]]) #TODO
