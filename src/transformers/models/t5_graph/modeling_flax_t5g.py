@@ -510,7 +510,7 @@ class FlaxT5Attention(nn.Module):
 
             else:
                 causal_mask = receivers <= senders
-            # graph_mask = graph_mask * causal_mask
+            graph_mask = graph_mask * causal_mask
 
         # During fast autoregressive decoding, we feed one position at a time,
         # and cache the keys and values step by step.

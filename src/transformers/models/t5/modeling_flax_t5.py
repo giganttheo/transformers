@@ -398,7 +398,7 @@ class FlaxT5Attention(nn.Module):
             attention_mask = jnp.broadcast_to(
                 jnp.expand_dims(attention_mask, axis=(-3, -2)), causal_attention_mask.shape
             )
-            # attention_mask = combine_masks(attention_mask, causal_attention_mask)
+            attention_mask = combine_masks(attention_mask, causal_attention_mask)
         elif attention_mask is not None:
             attention_mask = jnp.expand_dims(attention_mask, axis=(-3, -2))
 
