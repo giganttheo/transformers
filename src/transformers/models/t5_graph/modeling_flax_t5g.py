@@ -421,9 +421,11 @@ class FlaxT5Attention(nn.Module):
             # position_bias = position_bias * (receivers >= causal_attention_mask_shift) * (receivers <= senders)  #TODO TODO TODO
             
             #v1
-            position_bias = position_bias * ((senders >= causal_attention_mask_shift) \
-                                             & (senders < causal_attention_mask_shift + seq_length))# \
-                                            #  & (receivers < max_decoder_length))
+            overlap = (query_length - (causal_attention_mask_shift + seq_length)) * (causal_attention_mask_shift + seq_length < query_length)
+            dynamic_idx = (causal_attention_mask_shift - overlap, causal_attention_mask_shift + seq_length - overlap)
+            position_bias = position_bias * ((senders >= dynamic_idx[0]) \
+                                             & (senders < dynamic_idx[1])\
+                                             & (receivers < max_decoder_length))
 
             #v2
             # position_bias = position_bias * ((receivers >= causal_attention_mask_shift) \
