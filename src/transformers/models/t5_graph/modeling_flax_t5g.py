@@ -493,6 +493,8 @@ class FlaxT5Attention(nn.Module):
 
                 # # # # adapting the vanilla one (n2 memory)
 
+                causal_mask = (receivers <= causal_attention_mask_shift)
+
                 # causal_attention_mask = make_causal_mask(attention_mask, dtype="bool")
                 # causal_attention_mask = jax.lax.dynamic_slice(
                 #     causal_attention_mask,
@@ -509,7 +511,7 @@ class FlaxT5Attention(nn.Module):
                 # causal_mask = receivers <= senders
                 #logically this should work
 
-                causal_mask = receivers <= senders
+                # causal_mask = receivers <= senders
                 
                 # causal_mask = (receivers <= senders) & (senders >= causal_attention_mask_shift) & (senders < seq_length + causal_attention_mask_shift) & (receivers < max_decoder_length)
 
