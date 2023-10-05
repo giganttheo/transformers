@@ -528,7 +528,7 @@ class FlaxT5Attention(nn.Module):
         attn_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)))
         #merge attention mask with graph mask
         if attention_mask is not None:
-            graph_mask = graph_mask * attn_mask_2_graph_mask(attention_mask, senders)# * attn_mask_2_graph_mask(attention_mask, receivers)
+            graph_mask = graph_mask #* attn_mask_2_graph_mask(attention_mask, senders)# * attn_mask_2_graph_mask(attention_mask, receivers)
 
 
         # if self.has_variable("cache", "cached_key"):
