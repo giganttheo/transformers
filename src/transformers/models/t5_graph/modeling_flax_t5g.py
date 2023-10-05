@@ -549,7 +549,7 @@ class FlaxT5Attention(nn.Module):
             )
 
             if graph_mask is not None:
-                position_bias = position_bias + graph_mask
+                position_bias = position_bias # + graph_mask
             
             if graph_mask is not None:
                 position_bias = graph_mask
