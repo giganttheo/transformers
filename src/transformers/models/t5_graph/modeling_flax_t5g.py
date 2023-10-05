@@ -421,14 +421,14 @@ class FlaxT5Attention(nn.Module):
             # position_bias = position_bias * (receivers >= causal_attention_mask_shift) * (receivers <= senders)  #TODO TODO TODO
             
             #v1
-            # position_bias = position_bias * ((senders >= causal_attention_mask_shift) \
-            #                                  & (senders < causal_attention_mask_shift + seq_length) \
-            #                                  & (receivers < max_decoder_length))
+            position_bias = position_bias * ((senders >= causal_attention_mask_shift) \
+                                             & (senders < causal_attention_mask_shift + seq_length))# \
+                                            #  & (receivers < max_decoder_length))
 
             #v2
-            position_bias = position_bias * ((receivers >= causal_attention_mask_shift) \
-                                             & (receivers < causal_attention_mask_shift + seq_length) \
-                                             & (senders < max_decoder_length))
+            # position_bias = position_bias * ((receivers >= causal_attention_mask_shift) \
+            #                                  & (receivers < causal_attention_mask_shift + seq_length) \
+            #                                  & (senders < max_decoder_length))
         return position_bias
 
     def _create_position_bias(
