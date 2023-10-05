@@ -622,6 +622,7 @@ class FlaxT5Attention(nn.Module):
             
             if attention_mask is not None:
                 causal_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, r, s: mask[s, r]))
+                attention_mask = jnp.broadcast_to(attention_mask, (batch_size, self.n_heads,) + attention_mask.shape[-2:])
                 position_bias = position_bias + causal_mask_2_graph_mask(attention_mask, receivers, senders)
 
         # if self.has_variable("cache", "cached_key"):
