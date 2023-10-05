@@ -528,7 +528,7 @@ class FlaxT5Attention(nn.Module):
         attn_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)))
         #merge attention mask with graph mask
         if attention_mask is not None:
-            graph_mask = graph_mask #* attn_mask_2_graph_mask(attention_mask, senders)# * attn_mask_2_graph_mask(attention_mask, receivers)
+            graph_mask = graph_mask * attn_mask_2_graph_mask(attention_mask, senders) * attn_mask_2_graph_mask(attention_mask, receivers)
 
 
         # if self.has_variable("cache", "cached_key"):
@@ -536,12 +536,12 @@ class FlaxT5Attention(nn.Module):
         #     # pass
 
         # replace masked positions with -10_000
-        # mask_value = jnp.finfo(self.dtype).min
-        # graph_mask = jax.lax.select(
-        #     graph_mask > 0,
-        #     jnp.full(graph_mask.shape, 0.0).astype(self.dtype),
-        #     jnp.full(graph_mask.shape, mask_value).astype(self.dtype),
-        # )
+        mask_value = jnp.finfo(self.dtype).min
+        graph_mask = jax.lax.select(
+            graph_mask > 0,
+            jnp.full(graph_mask.shape, 0.0).astype(self.dtype),
+            jnp.full(graph_mask.shape, mask_value).astype(self.dtype),
+        )
 
 
         if position_bias is None:
