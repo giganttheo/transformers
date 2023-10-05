@@ -603,8 +603,15 @@ class FlaxT5Attention(nn.Module):
             position_bias = self._create_position_bias(
                 key_states, query_states, attention_mask, init_cache, seq_length, causal_attention_mask_shift
             )
-
-            if graph_mask is not None:
+            
+            if attention_mask is not None:
+                mask_value = jnp.finfo(self.dtype).min
+                attention_mask = jax.lax.select(
+                    attention_mask > 0,
+                    jnp.full(attention_mask.shape, 0.0).astype(self.dtype),
+                    jnp.full(attention_mask.shape, mask_value).astype(self.dtype),
+                )
+            if attention_mask is not None:#graph_mask is not None:
                 # position_bias = position_bias + graph_mask
                 position_bias = jnp.broadcast_to(position_bias, (batch_size, self.n_heads,) + position_bias.shape[-2:])
                 position_bias = position_bias + attention_mask
