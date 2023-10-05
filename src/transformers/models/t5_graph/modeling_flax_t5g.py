@@ -527,8 +527,8 @@ class FlaxT5Attention(nn.Module):
 
         attn_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)))
         #merge attention mask with graph mask
-        # if attention_mask is not None:
-        #     graph_mask = graph_mask * attn_mask_2_graph_mask(attention_mask, receivers)
+        if attention_mask is not None:
+            graph_mask = graph_mask * attn_mask_2_graph_mask(attention_mask, senders)
 
 
         # if self.has_variable("cache", "cached_key"):
@@ -556,9 +556,9 @@ class FlaxT5Attention(nn.Module):
             if graph_mask is not None:
                 position_bias = graph_mask
 
-        if self.has_variable("cache", "cached_key"):
-            print(position_bias[0, 0, senders[0,0,:10]]) #TODO
-            # pass
+        # if self.has_variable("cache", "cached_key"):
+        #     print(position_bias[0, 0, senders[0,0,:10]]) #TODO
+        #     # pass
 
         attn_output, attn_weights = scaled_dot_product_attention_graph(query_states, key_states, value_states, receivers, senders, position_bias, self.dtype)
 
