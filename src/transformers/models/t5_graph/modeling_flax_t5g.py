@@ -476,7 +476,6 @@ class FlaxT5Attention(nn.Module):
             senders = jnp.array([[[0]]*self.n_heads]*batch_size, dtype=jnp.int32)
             graph_mask = jnp.array([[[0]]*self.n_heads]*batch_size, dtype = self.dtype)
 
-
         # for fast decoding causal attention mask should be shifted
         causal_attention_mask_shift = (
             self.variables["cache"]["cache_index"] if (self.has_variable("cache", "cached_key") and self.causal) else 0
@@ -523,12 +522,12 @@ class FlaxT5Attention(nn.Module):
             if pad_mask is not None:
                 #causal cache mask to only attend to the tokens up to the current token
                 pad_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)), in_axes=(None, 0))
-                graph_mask = graph_mask * pad_mask_2_graph_mask(pad_mask, senders)
+                graph_mask = graph_mask * pad_mask_2_graph_mask(pad_mask, receivers) #TODO
 
         attn_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)))
         #merge attention mask with graph mask
         if attention_mask is not None:
-            graph_mask = graph_mask * attn_mask_2_graph_mask(attention_mask, receivers)# * attn_mask_2_graph_mask(attention_mask, receivers)
+            graph_mask = graph_mask * attn_mask_2_graph_mask(attention_mask, receivers) * attn_mask_2_graph_mask(attention_mask, receivers)
 
         # if self.has_variable("cache", "cached_key"):
         #     print(graph_mask[0, 0, senders[0,0,:100]]) #TODO
