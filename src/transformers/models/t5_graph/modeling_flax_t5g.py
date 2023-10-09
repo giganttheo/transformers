@@ -319,10 +319,10 @@ class FlaxT5Attention(nn.Module):
 
     def compute_bias_sparse(self, query_length, key_length, senders, receivers):
         """Compute binned relative position bias"""
-        context_position = jnp.arange(query_length, dtype="i4")
-        memory_position = jnp.arange(key_length, dtype="i4")
+        context_position = jnp.arange(query_length, dtype="i4")[:, None]
+        memory_position = jnp.arange(key_length, dtype="i4")[:, None]
 
-        relative_position = (memory_position[senders] - context_position[receivers])[:, None] #test this change
+        relative_position = (memory_position[senders] - context_position[receivers])
         relative_position_bucket = self._relative_position_bucket(
             relative_position,
             bidirectional=(not self.causal),
