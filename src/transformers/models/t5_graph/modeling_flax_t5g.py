@@ -487,7 +487,7 @@ class FlaxT5Attention(nn.Module):
             jnp.full(graph_mask.shape, mask_value).astype(self.dtype),
         )
 
-        if position_bias is None:
+        if position_bias is None or position_bias.shape != graph_mask.shape:
             # compute position bias (only for first layer)
             position_bias = self._create_position_bias_sparse(
                 key_states, query_states, graph_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift
