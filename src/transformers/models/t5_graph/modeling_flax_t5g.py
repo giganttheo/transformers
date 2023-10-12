@@ -319,12 +319,12 @@ class FlaxT5Attention(nn.Module):
 
     def compute_bias_sparse(self, query_length, key_length, receivers, senders):
         """Compute binned relative position bias"""
-        context_position = jnp.arange(query_length, dtype="i4")[:, None]
-        memory_position = jnp.arange(key_length, dtype="i4")[:, None]
+        context_position = jnp.arange(query_length, dtype="i4")
+        memory_position = jnp.arange(key_length, dtype="i4")
 
-        relative_position = memory_position[receivers] - context_position[senders] 
+        relative_position = memory_position[receivers] - context_position[senders]
         relative_position_bucket = self._relative_position_bucket(
-            relative_position,
+            relative_position[..., None],
             bidirectional=(not self.causal),
             num_buckets=self.relative_attention_num_buckets,
             max_distance=self.relative_attention_max_distance,
@@ -384,7 +384,6 @@ class FlaxT5Attention(nn.Module):
             # causal mask for cached decoder self-attention: our single query position should only attend to those key positions
             # that have already been generated and cached, not the remaining zero elements.
             causal_mask = jnp.arange(max_length) < cur_index + num_updated_cache_vectors
-
         return key, value, causal_mask
 
     def _create_position_bias_sparse(
