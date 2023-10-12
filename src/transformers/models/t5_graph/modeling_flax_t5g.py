@@ -324,7 +324,7 @@ class FlaxT5Attention(nn.Module):
 
         relative_position = memory_position[receivers] - context_position[senders] 
         relative_position_bucket = self._relative_position_bucket(
-            relative_position[:,:,None],
+            relative_position[... ,None],
             bidirectional=(not self.causal),
             num_buckets=self.relative_attention_num_buckets,
             max_distance=self.relative_attention_max_distance,
