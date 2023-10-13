@@ -449,7 +449,8 @@ class FlaxT5Attention(nn.Module):
             # cache_index = self.variables["cache"]["cache_index"]
             print("Autoregressive!")
             idx_shape = (batch_size, self.n_heads, 64) #placeholder
-            print("id: ", causal_attention_mask_shift)
+            call(lambda x: print(f"id: {x}"), causal_attention_mask_shift)
+
             receivers = jnp.broadcast_to(jnp.arange(idx_shape[-1])[None, None, :], idx_shape)
             senders = jnp.full(idx_shape, causal_attention_mask_shift)
             graph_mask = jnp.ones(idx_shape, dtype="i4")
