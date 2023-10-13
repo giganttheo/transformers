@@ -495,7 +495,7 @@ class FlaxT5Attention(nn.Module):
 
         compared_pos_bias = position_bias
 
-        if position_bias is None:
+        if position_bias is None or True:
             position_bias = self._create_position_bias_sparse(
                 key_states, query_states, graph_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift
             )
