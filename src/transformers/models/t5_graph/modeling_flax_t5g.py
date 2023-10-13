@@ -456,7 +456,7 @@ class FlaxT5Attention(nn.Module):
             if self.has_variable("cache", "cached_key"):
                 #this is reproducing the dynamic_slice + broadcast_to combo
                 #works for 1 token at a time decoding only (ie seq_length==1)
-                causal_mask = receivers <= jnp.minimum(senders, causal_attention_mask_shift)
+                causal_mask = receivers <= causal_attention_mask_shift#jnp.minimum(senders, causal_attention_mask_shift)
             else:
                 causal_mask = receivers <= senders
             graph_mask = graph_mask * causal_mask
@@ -488,7 +488,7 @@ class FlaxT5Attention(nn.Module):
         # if position_bias is None or position_bias.shape != graph_mask.shape:
         # compute position bias (only for first layer) ==> for all layers
         # TODO: find a way to reliably check if the attn pattern is different between layers
-        if position_bias is None:
+        if True:#position_bias is None:
             position_bias = self._create_position_bias_sparse(
                 key_states, query_states, graph_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift
             )
