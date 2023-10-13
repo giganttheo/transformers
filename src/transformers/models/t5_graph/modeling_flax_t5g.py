@@ -229,6 +229,9 @@ class FlaxT5LayerFF(nn.Module):
         hidden_states = hidden_states + self.dropout(forwarded_states, deterministic=deterministic)
         return hidden_states
 
+#TMP TODO
+from jax.experimental.host_callback import call
+
 class FlaxT5Attention(nn.Module):
     config: T5Config
     has_relative_attention_bias: bool = False
@@ -504,7 +507,8 @@ class FlaxT5Attention(nn.Module):
 
         if compared_pos_bias is not None:
             print(position_bias.shape, compared_pos_bias.shape)
-            print(jnp.mean(jnp.abs(compared_pos_bias - position_bias)))
+            x = (jnp.mean(jnp.abs(compared_pos_bias - position_bias)))
+            call(lambda x: print(f"distance: {x}"), x)
 
         attn_output, attn_weights = scaled_dot_product_attention_graph(query_states, key_states, value_states, receivers, senders, position_bias, self.dtype)
 
