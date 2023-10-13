@@ -489,7 +489,10 @@ class FlaxT5Attention(nn.Module):
         # compute position bias (only for first layer) ==> for all layers
         # TODO: find a way to reliably check if the attn pattern is different between layers
         # print("position bias is:")
-        if position_bias is None or True:
+
+        compared_pos_bias = position_bias
+
+        if position_bias is None:
             position_bias = self._create_position_bias_sparse(
                 key_states, query_states, graph_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift
             )
@@ -498,6 +501,10 @@ class FlaxT5Attention(nn.Module):
                 position_bias = position_bias + graph_mask
         # else:
         #     print("retrieved:", position_bias.shape, self.causal)
+
+        if compared_pos_bias is not None:
+            print(position_bias.shape)
+            print(compared_pos_bias == position_bias)
 
         attn_output, attn_weights = scaled_dot_product_attention_graph(query_states, key_states, value_states, receivers, senders, position_bias, self.dtype)
 
