@@ -456,7 +456,7 @@ class FlaxT5Attention(nn.Module):
             if self.has_variable("cache", "cached_key"):
                 #this is reproducing the dynamic_slice + broadcast_to combo
                 #works for 1 token at a time decoding only (ie seq_length==1)
-                causal_mask = receivers <= min(senders, causal_attention_mask_shift)
+                causal_mask = receivers <= jnp.minimum(senders, causal_attention_mask_shift)
             else:
                 causal_mask = receivers <= senders
             graph_mask = graph_mask * causal_mask
