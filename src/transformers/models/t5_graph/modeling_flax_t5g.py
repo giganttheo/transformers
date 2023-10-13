@@ -503,7 +503,7 @@ class FlaxT5Attention(nn.Module):
         #     print("retrieved:", position_bias.shape, self.causal)
 
         if compared_pos_bias is not None:
-            print(position_bias.shape)
+            print(position_bias.shape, compared_pos_bias.shape)
             print(jnp.mean(compared_pos_bias == position_bias))
 
         attn_output, attn_weights = scaled_dot_product_attention_graph(query_states, key_states, value_states, receivers, senders, position_bias, self.dtype)
