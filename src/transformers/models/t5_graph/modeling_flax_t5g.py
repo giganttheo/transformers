@@ -442,10 +442,9 @@ class FlaxT5Attention(nn.Module):
 
         else: #during initialization
             #Graph attention
-            print("init..........")
-            receivers = jnp.array([[[0]]*self.n_heads]*batch_size, dtype=jnp.int32)
-            senders = jnp.array([[[0]]*self.n_heads]*batch_size, dtype=jnp.int32)
-            graph_mask = jnp.array([[[0]]*self.n_heads]*batch_size, dtype = self.dtype)
+            receivers = jnp.array([[[]]*self.n_heads]*batch_size, dtype=jnp.int32)
+            senders = jnp.array([[[]]*self.n_heads]*batch_size, dtype=jnp.int32)
+            graph_mask = jnp.array([[[]]*self.n_heads]*batch_size, dtype = self.dtype)
 
         # for fast decoding causal attention mask should be shifted
         causal_attention_mask_shift = (
