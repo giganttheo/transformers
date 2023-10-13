@@ -437,29 +437,38 @@ class FlaxT5Attention(nn.Module):
         # counter-act scaling in dot_product_attention_weights function
         query_states *= jnp.sqrt(query_states.shape[-1]).astype(self.dtype)
 
-        if "receivers" in self.variables["params"].keys():
+        # for fast decoding causal attention mask should be shifted
+        causal_attention_mask_shift = (
+            self.variables["cache"]["cache_index"] if (self.has_variable("cache", "cached_key") and self.causal) else 0
+        )
+
+        #during auto-regressive decoding, one token is fed at a time
+        #so the graph should be taken accordingly
+        if query_states.shape[1] == 1:# and "ar_senders" in self.variables["params"].keys():
+            #detects autoregressive behaviour
+            # cache_index = self.variables["cache"]["cache_index"]
+            print("Autoregressive!")
+            idx_shape = (batch_size, self.n_heads, jnp.max(self.variables["params"]["receivers"]))
+            receivers = jnp.broadcast_to(jnp.arange()[None, None, :], idx_shape)
+            senders = jnp.full(idx_shape, causal_attention_mask_shift)
+            graph_mask = jnp.ones(idx_shape, dtype="i4")
+        elif "receivers" in self.variables["params"].keys():
             #Graph attention
             receivers = self.variables["params"]["receivers"]
             senders = self.variables["params"]["senders"]
             graph_mask = self.variables["params"]["graph_mask"]
-
         else: #for initialization
             #Graph attention
             receivers = jnp.array([[[0]]*self.n_heads]*batch_size, dtype=jnp.uint16)
             senders = jnp.array([[[0]]*self.n_heads]*batch_size, dtype=jnp.uint16)
             graph_mask = jnp.array([[[0]]*self.n_heads]*batch_size, dtype = "i4")
 
-        # for fast decoding causal attention mask should be shifted
-        causal_attention_mask_shift = (
-            self.variables["cache"]["cache_index"] if (self.has_variable("cache", "cached_key") and self.causal) else 0
-        )
-
         if self.causal:
             # fast decoding for generate requires special attention_mask
             if self.has_variable("cache", "cached_key"):
                 #this is reproducing the dynamic_slice + broadcast_to combo
                 #works for 1 token at a time decoding only (ie seq_length==1)
-                causal_mask = receivers <= causal_attention_mask_shift#jnp.minimum(senders, causal_attention_mask_shift)
+                causal_mask = receivers <= causal_attention_mask_shift
             else:
                 causal_mask = receivers <= senders
             graph_mask = graph_mask * causal_mask
