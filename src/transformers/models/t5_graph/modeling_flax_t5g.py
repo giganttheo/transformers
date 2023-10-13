@@ -495,6 +495,8 @@ class FlaxT5Attention(nn.Module):
 
             if graph_mask is not None:
                 position_bias = position_bias + graph_mask
+        else:
+            print(position_bias.shape)
 
         attn_output, attn_weights = scaled_dot_product_attention_graph(query_states, key_states, value_states, receivers, senders, position_bias, self.dtype)
 
