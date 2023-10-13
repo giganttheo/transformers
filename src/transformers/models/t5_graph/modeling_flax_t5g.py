@@ -444,7 +444,7 @@ class FlaxT5Attention(nn.Module):
 
         #during auto-regressive decoding, one token is fed at a time
         #so the graph should be taken accordingly
-        if query_states.shape[1] == 1:# and "ar_senders" in self.variables["params"].keys():
+        if query_states.shape[1] == 1 and "receivers" in self.variables["params"].keys():# and "ar_senders" in self.variables["params"].keys():
             #detects autoregressive behaviour
             # cache_index = self.variables["cache"]["cache_index"]
             print("Autoregressive!")
