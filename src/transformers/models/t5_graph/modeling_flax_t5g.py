@@ -496,6 +496,11 @@ class FlaxT5Attention(nn.Module):
         if attention_mask is not None:
             graph_mask = graph_mask * attn_mask_2_graph_mask(attention_mask, receivers) * attn_mask_2_graph_mask(attention_mask, senders) #was r only
 
+
+        x = jax.numpy.nonzero(graph_mask)
+        call(lambda x: print(f"non zero pos s: {x}"), senders[x])
+        call(lambda x: print(f"non zero pos r: {x}"), receivers[x])
+
         # replace masked positions with -10_000
         mask_value = jnp.finfo(self.dtype).min
         graph_mask = jax.lax.select(
