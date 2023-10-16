@@ -442,19 +442,7 @@ class FlaxT5Attention(nn.Module):
             self.variables["cache"]["cache_index"] if (self.has_variable("cache", "cached_key") and self.causal) else 0
         )
 
-        #during auto-regressive decoding, one token is fed at a time
-        #so the graph should be taken accordingly
-        if query_states.shape[1] == 1 and "receivers" in self.variables["params"].keys():# and "ar_senders" in self.variables["params"].keys():
-            #detects autoregressive behaviour
-            # cache_index = self.variables["cache"]["cache_index"]
-            print("Autoregressive!")
-            idx_shape = (batch_size, self.n_heads, 64) #placeholder
-            call(lambda x: print(f"id: {x}"), causal_attention_mask_shift)
-
-            receivers = jnp.broadcast_to(jnp.arange(idx_shape[-1])[None, None, :], idx_shape)
-            senders = jnp.full(idx_shape, causal_attention_mask_shift)
-            graph_mask = jnp.ones(idx_shape, dtype="i4")
-        elif "receivers" in self.variables["params"].keys():
+        if "receivers" in self.variables["params"].keys():
             #Graph attention
             receivers = self.variables["params"]["receivers"]
             senders = self.variables["params"]["senders"]
@@ -467,13 +455,12 @@ class FlaxT5Attention(nn.Module):
 
         if self.causal:
             # fast decoding for generate requires special attention_mask
-            # if self.has_variable("cache", "cached_key"):
-            #     #this is reproducing the dynamic_slice + broadcast_to combo
-            #     #works for 1 token at a time decoding only (ie seq_length==1)
-            #     causal_mask = receivers <= causal_attention_mask_shift
-            # else:
-            #     causal_mask = receivers <= senders
-            causal_mask = receivers <= senders
+            if self.has_variable("cache", "cached_key"):
+                #this is reproducing the dynamic_slice + broadcast_to combo
+                #works for 1 token at a time decoding only (ie seq_length==1)
+                causal_mask = receivers <= causal_attention_mask_shift
+            else:
+                causal_mask = receivers <= senders
             graph_mask = graph_mask * causal_mask
 
         # During fast autoregressive decoding, we feed one position at a time,
@@ -482,10 +469,10 @@ class FlaxT5Attention(nn.Module):
             key_states, value_states, pad_mask = self._concatenate_to_cache(
                 key_states, value_states, query_states
             )
-            # if pad_mask is not None:
-            #     #causal cache mask to only attend to the tokens up to the current token
-            #     pad_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)), in_axes=(None, 0))
-            #     graph_mask = graph_mask * pad_mask_2_graph_mask(pad_mask, receivers)
+            if pad_mask is not None:
+                #causal cache mask to only attend to the tokens up to the current token
+                pad_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)), in_axes=(None, 0))
+                graph_mask = graph_mask * pad_mask_2_graph_mask(pad_mask, receivers)
 
         attn_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)))
         # merge attention mask with graph mask
@@ -511,16 +498,8 @@ class FlaxT5Attention(nn.Module):
             position_bias = self._create_position_bias_sparse(
                 key_states, query_states, graph_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift
             )
-            # print(f"computed: {position_bias.shape, self.causal}")
             if graph_mask is not None:
                 position_bias = position_bias + graph_mask
-        # else:
-        #     print("retrieved:", position_bias.shape, self.causal)
-
-        if compared_pos_bias is not None:
-            print(position_bias.shape, compared_pos_bias.shape)
-            x = (jnp.mean(jnp.abs(compared_pos_bias - position_bias)))
-            call(lambda x: print(f"distance: {x}"), x)
 
         attn_output, attn_weights = scaled_dot_product_attention_graph(query_states, key_states, value_states, receivers, senders, position_bias, self.dtype)
 
