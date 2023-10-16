@@ -444,7 +444,10 @@ class FlaxT5Attention(nn.Module):
 
         # detecting autoregressive behaviour?
 
-        call( lambda causal_attention_mask_shift, self: print("mask shift: ", causal_attention_mask_shift, "causal: ", self.causal, "pos bias:", self.has_relative_attention_bias), (causal_attention_mask_shift, self) )
+        call(lambda x: print(f"mask shift: {x}"))(causal_attention_mask_shift)
+        call(lambda x: print(f"causal: {x}"))(self.causal)
+        call(lambda x: print(f"pos bias: {x}"))(self.has_relative_attention_bias)
+
 
         #during auto-regressive decoding, one token is fed at a time
         #so the graph should be taken accordingly
