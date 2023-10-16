@@ -485,7 +485,7 @@ class FlaxT5Attention(nn.Module):
             key_states, value_states, pad_mask = self._concatenate_to_cache(
                 key_states, value_states, query_states
             )
-            graph_mask = senders == causal_attention_mask_shift
+            graph_mask = graph_mask * (senders == causal_attention_mask_shift)
             if pad_mask is not None:
                 #causal cache mask to only attend to the tokens up to the current token
                 pad_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)), in_axes=(None, 0))
