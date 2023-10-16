@@ -395,13 +395,6 @@ class FlaxT5Attention(nn.Module):
         cache_is_filled = self.causal and self.has_variable("cache", "cached_key") and (not init_cache)
         key_length = key_states.shape[1]
         query_length = key_length if cache_is_filled else query_states.shape[1]
-
-        # if key and values are already calculated, only the last query position bias should be taken
-        # if cache_is_filled and self.has_relative_attention_bias:
-        #     #this is reproducing the dynamic_slice + broadcast_to combo
-        #     #works for 1 token at a time decoding only (ie seq_length==1)
-        #     current_token_sender = jnp.full(senders.shape, causal_attention_mask_shift)
-        #     position_bias = self.compute_bias_sparse(query_length, key_length, receivers, current_token_sender)
         if self.has_relative_attention_bias:
             position_bias = self.compute_bias_sparse(query_length, key_length, receivers, senders)
         else: #attention_mask is never None
@@ -451,17 +444,14 @@ class FlaxT5Attention(nn.Module):
 
         #during auto-regressive decoding, one token is fed at a time
         #so the graph should be taken accordingly
-        if query_states.shape[1] == 1 and "receivers" in self.variables["params"].keys():# and "ar_senders" in self.variables["params"].keys():
-            #detects autoregressive behaviour
-            # cache_index = self.variables["cache"]["cache_index"]
-            print("Autoregressive!")
-            idx_shape = (batch_size, self.n_heads, 64) #placeholder
-            call(lambda x: print(f"id: {x}"), causal_attention_mask_shift)
-
-            receivers = jnp.broadcast_to(jnp.arange(idx_shape[-1])[None, None, :], idx_shape)
-            senders = jnp.full(idx_shape, causal_attention_mask_shift)
-            graph_mask = jnp.ones(idx_shape, dtype="i4")
-        elif "receivers" in self.variables["params"].keys():
+        # if query_states.shape[1] == 1 and "receivers" in self.variables["params"].keys():# and "ar_senders" in self.variables["params"].keys():
+        #     #detects autoregressive behaviour
+        #     # cache_index = self.variables["cache"]["cache_index"]
+        #     idx_shape = (batch_size, self.n_heads, 64) #placeholder
+        #     receivers = jnp.broadcast_to(jnp.arange(idx_shape[-1])[None, None, :], idx_shape)
+        #     senders = jnp.full(idx_shape, causal_attention_mask_shift)
+        #     graph_mask = jnp.ones(idx_shape, dtype="i4")
+        if "receivers" in self.variables["params"].keys():
             #Graph attention
             receivers = self.variables["params"]["receivers"]
             senders = self.variables["params"]["senders"]
@@ -489,6 +479,7 @@ class FlaxT5Attention(nn.Module):
             key_states, value_states, pad_mask = self._concatenate_to_cache(
                 key_states, value_states, query_states
             )
+            graph_mask = senders == causal_attention_mask_shift
             # if pad_mask is not None:
             #     #causal cache mask to only attend to the tokens up to the current token
             #     pad_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)), in_axes=(None, 0))
