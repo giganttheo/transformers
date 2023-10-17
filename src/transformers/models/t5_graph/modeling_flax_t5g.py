@@ -480,10 +480,10 @@ class FlaxT5Attention(nn.Module):
             key_states, value_states, pad_mask = self._concatenate_to_cache(
                 key_states, value_states, query_states
             )
-            if pad_mask is not None:
-                #causal cache mask to only attend to the tokens up to the current token
-                pad_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)), in_axes=(None, 0))
-                graph_mask = graph_mask * pad_mask_2_graph_mask(pad_mask, receivers)
+            # if pad_mask is not None:
+            #     #causal cache mask to only attend to the tokens up to the current token
+            #     pad_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)), in_axes=(None, 0))
+            #     graph_mask = graph_mask * pad_mask_2_graph_mask(pad_mask, receivers)
 
         if (self.has_variable("cache", "cached_key") or init_cache):
             graph_mask = graph_mask * (senders == causal_attention_mask_shift)
@@ -515,6 +515,9 @@ class FlaxT5Attention(nn.Module):
             )
             if graph_mask is not None:
                 position_bias = position_bias + graph_mask
+
+        if query_states.shape[1] == 1 :
+            senders = jnp.full_like(senders, causal_attention_mask_shift)
 
         attn_output, attn_weights = scaled_dot_product_attention_graph(query_states, key_states, value_states, receivers, senders, position_bias, self.dtype)
 
