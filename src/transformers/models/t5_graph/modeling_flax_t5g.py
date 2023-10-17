@@ -509,15 +509,15 @@ class FlaxT5Attention(nn.Module):
         # TODO: find a way to reliably check if the attn pattern is different between layers
         # print("position bias is:")
 
+        if query_states.shape[1] == 1 and self.causal:
+            senders = jnp.full_like(senders, causal_attention_mask_shift)
+
         if position_bias is None:
             position_bias = self._create_position_bias_sparse(
                 key_states, query_states, graph_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift
             )
             if graph_mask is not None:
                 position_bias = position_bias + graph_mask
-
-        if query_states.shape[1] == 1 and self.causal:
-            senders = jnp.full_like(senders, causal_attention_mask_shift)
 
         attn_output, attn_weights = scaled_dot_product_attention_graph(query_states, key_states, value_states, receivers, senders, position_bias, self.dtype)
 
