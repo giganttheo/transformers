@@ -387,6 +387,7 @@ class FlaxT5Attention(nn.Module):
             # causal mask for cached decoder self-attention: our single query position should only attend to those key positions
             # that have already been generated and cached, not the remaining zero elements.
             causal_mask = jnp.arange(max_length) < cur_index + num_updated_cache_vectors
+
         return key, value, causal_mask
 
     def _create_position_bias_sparse(
@@ -402,10 +403,11 @@ class FlaxT5Attention(nn.Module):
             #works for 1 token at a time decoding only (ie seq_length==1)
             current_token_sender = jnp.full(senders.shape, causal_attention_mask_shift)
             position_bias = self.compute_bias_sparse(query_length, key_length, receivers, current_token_sender)
-        if self.has_relative_attention_bias:
+        elif self.has_relative_attention_bias:
             position_bias = self.compute_bias_sparse(query_length, key_length, receivers, senders)
         else: #attention_mask is never None
             position_bias = jnp.zeros_like(attention_mask, dtype=self.dtype)
+
         return position_bias
 
     def __call__(
@@ -437,11 +439,6 @@ class FlaxT5Attention(nn.Module):
         # counter-act scaling in dot_product_attention_weights function
         query_states *= jnp.sqrt(query_states.shape[-1]).astype(self.dtype)
 
-        # for fast decoding causal attention mask should be shifted
-        causal_attention_mask_shift = (
-            self.variables["cache"]["cache_index"] if (self.has_variable("cache", "cached_key") and self.causal) else 0
-        )
-
         if "receivers" in self.variables["params"].keys():
             #Graph attention
             receivers = self.variables["params"]["receivers"]
@@ -452,6 +449,11 @@ class FlaxT5Attention(nn.Module):
             receivers = jnp.array([[[0]]*self.n_heads]*batch_size, dtype=jnp.uint16)
             senders = jnp.array([[[0]]*self.n_heads]*batch_size, dtype=jnp.uint16)
             graph_mask = jnp.array([[[0]]*self.n_heads]*batch_size, dtype = "i4")
+
+        # for fast decoding causal attention mask should be shifted
+        causal_attention_mask_shift = (
+            self.variables["cache"]["cache_index"] if (self.has_variable("cache", "cached_key") and self.causal) else 0
+        )
 
         if self.causal:
             # fast decoding for generate requires special attention_mask
@@ -477,7 +479,7 @@ class FlaxT5Attention(nn.Module):
         attn_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)))
         # merge attention mask with graph mask
         if attention_mask is not None:
-            graph_mask = graph_mask * attn_mask_2_graph_mask(attention_mask, receivers) * attn_mask_2_graph_mask(attention_mask, senders) #was r only
+            graph_mask = graph_mask * attn_mask_2_graph_mask(attention_mask, receivers) * attn_mask_2_graph_mask(attention_mask, senders)
 
         # replace masked positions with -10_000
         mask_value = jnp.finfo(self.dtype).min
@@ -490,18 +492,30 @@ class FlaxT5Attention(nn.Module):
         # if position_bias is None or position_bias.shape != graph_mask.shape:
         # compute position bias (only for first layer) ==> for all layers
         # TODO: find a way to reliably check if the attn pattern is different between layers
-        # print("position bias is:")
-
-        compared_pos_bias = position_bias
 
         if position_bias is None:
+            # compute position bias (only for first layer)
             position_bias = self._create_position_bias_sparse(
                 key_states, query_states, graph_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift
             )
+
             if graph_mask is not None:
                 position_bias = position_bias + graph_mask
 
-        attn_output, attn_weights = scaled_dot_product_attention_graph(query_states, key_states, value_states, receivers, senders, position_bias, self.dtype)
+        # TODO: add rng (via dropout?)
+        # # create dropout rng
+        # dropout_rng = None
+        # if not deterministic and self.dropout > 0.0:
+        #     dropout_rng = self.make_rng("dropout")
+
+        attn_output, attn_weights = scaled_dot_product_attention_graph(
+            query_states,
+            key_states,
+            value_states,
+            receivers,
+            senders,
+            position_bias,
+            self.dtype)
 
         # bring back to (batch_size, seq_length, d_model)
         attn_output = self._merge_heads(attn_output)
