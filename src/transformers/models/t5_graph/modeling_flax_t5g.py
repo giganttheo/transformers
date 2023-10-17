@@ -470,13 +470,13 @@ class FlaxT5Attention(nn.Module):
 
         if self.causal:
             # fast decoding for generate requires special attention_mask
-            if self.has_variable("cache", "cached_key"):
-                #this is reproducing the dynamic_slice + broadcast_to combo
-                #works for 1 token at a time decoding only (ie seq_length==1)
-                causal_mask = receivers <= causal_attention_mask_shift
-            else:
-                causal_mask = receivers <= senders
-            # causal_mask = receivers <= senders
+            # if self.has_variable("cache", "cached_key"):
+            #     #this is reproducing the dynamic_slice + broadcast_to combo
+            #     #works for 1 token at a time decoding only (ie seq_length==1)
+            #     causal_mask = receivers <= causal_attention_mask_shift
+            # else:
+            #     causal_mask = receivers <= senders
+            causal_mask = receivers <= senders
             graph_mask = graph_mask * causal_mask
 
         # During fast autoregressive decoding, we feed one position at a time,
@@ -499,8 +499,6 @@ class FlaxT5Attention(nn.Module):
 
         # x = jax.numpy.nonzero(graph_mask)
         call(lambda x: print(f"non zero : {x}"), jnp.count_nonzero(graph_mask))
-        # call(lambda x: print(f"non zero pos r: {x}"), receivers[x])
-        # print(f"non zero pos s: {senders[x]}")
 
         # replace masked positions with -10_000
         mask_value = jnp.finfo(self.dtype).min
@@ -515,22 +513,12 @@ class FlaxT5Attention(nn.Module):
         # TODO: find a way to reliably check if the attn pattern is different between layers
         # print("position bias is:")
 
-        compared_pos_bias = position_bias
-
         if position_bias is None:
             position_bias = self._create_position_bias_sparse(
                 key_states, query_states, graph_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift
             )
-            # print(f"computed: {position_bias.shape, self.causal}")
             if graph_mask is not None:
                 position_bias = position_bias + graph_mask
-        # else:
-        #     print("retrieved:", position_bias.shape, self.causal)
-
-        # if compared_pos_bias is not None:
-        #     print(position_bias.shape, compared_pos_bias.shape)
-        #     x = (jnp.mean(jnp.abs(compared_pos_bias - position_bias)))
-        #     call(lambda x: print(f"distance: {x}"), x)
 
         attn_output, attn_weights = scaled_dot_product_attention_graph(query_states, key_states, value_states, receivers, senders, position_bias, self.dtype)
 
