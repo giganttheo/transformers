@@ -443,11 +443,6 @@ class FlaxT5Attention(nn.Module):
 
         # detecting autoregressive behaviour?
 
-        # call(lambda x: print(f"mask shift: {x}"),causal_attention_mask_shift)
-        # call(lambda x: print(f"causal: {x}"),self.causal)
-        # call(lambda x: print(f"pos bias: {x}"),self.has_relative_attention_bias)
-
-
         #during auto-regressive decoding, one token is fed at a time
         #so the graph should be taken accordingly
         # if query_states.shape[1] == 1 and "receivers" in self.variables["params"].keys():# and "ar_senders" in self.variables["params"].keys():
@@ -490,7 +485,7 @@ class FlaxT5Attention(nn.Module):
                 pad_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)), in_axes=(None, 0))
                 graph_mask = graph_mask * pad_mask_2_graph_mask(pad_mask, receivers)
 
-        if self.causal:
+        if (self.has_variable("cache", "cached_key") or init_cache):
             graph_mask = graph_mask * (senders == causal_attention_mask_shift)
 
         attn_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)))
