@@ -516,7 +516,7 @@ class FlaxT5Attention(nn.Module):
             if graph_mask is not None:
                 position_bias = position_bias + graph_mask
 
-        if query_states.shape[1] == 1 :
+        if query_states.shape[1] == 1 and self.causal:
             senders = jnp.full_like(senders, causal_attention_mask_shift)
 
         attn_output, attn_weights = scaled_dot_product_attention_graph(query_states, key_states, value_states, receivers, senders, position_bias, self.dtype)
