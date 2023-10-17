@@ -495,8 +495,8 @@ class FlaxT5Attention(nn.Module):
             position_bias = self._create_position_bias_sparse(
                 key_states, query_states, graph_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift
             )
-            if graph_mask is not None:
-                position_bias = position_bias + graph_mask
+        if graph_mask is not None:
+            position_bias = position_bias + graph_mask
 
         attn_output, attn_weights = scaled_dot_product_attention_graph(query_states, key_states, value_states, receivers, senders, position_bias, self.dtype)
 
