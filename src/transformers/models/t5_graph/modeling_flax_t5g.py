@@ -457,11 +457,16 @@ class FlaxT5Attention(nn.Module):
 
         if self.causal:
             # fast decoding for generate requires special attention_mask
+
+            # what is initcache doing? i suppose it is True in encdec attention but not in decself
             if self.has_variable("cache", "cached_key") and (not init_cache):
                 #this is reproducing the dynamic_slice + broadcast_to combo
                 #works for 1 token at a time decoding only (ie seq_length==1)
                 senders = jnp.full(senders.shape, causal_attention_mask_shift)
-            causal_mask = receivers <= senders
+            if init_cache:
+                causal_mask = receivers <= causal_attention_mask_shift
+            else:
+                causal_mask = receivers <= senders
             graph_mask = graph_mask * causal_mask
 
         # During fast autoregressive decoding, we feed one position at a time,
