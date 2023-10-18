@@ -455,6 +455,11 @@ class FlaxT5Attention(nn.Module):
             self.variables["cache"]["cache_index"] if (self.has_variable("cache", "cached_key") and self.causal) else 0
         )
 
+        call(lambda x: print(f'====\n init cache:{x}'), init_cache)
+        call(lambda x: print(f'has cache:{x}'), self.has_variable("cache", "cached_key"))
+        call(lambda x: print(f'causal:{x}'), self.causal)
+        call(lambda x: print(f'q size:{x}'), query_states.shape[1])
+
         if self.causal:
             # fast decoding for generate requires special attention_mask
 
