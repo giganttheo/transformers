@@ -322,12 +322,12 @@ class FlaxT5Attention(nn.Module):
 
     def compute_bias_sparse(self, query_length, key_length, receivers, senders):
         """Compute binned relative position bias"""
-        context_position = jnp.arange(query_length, dtype="i4")[:, None]
-        memory_position = jnp.arange(key_length, dtype="i4")[:, None]
+        context_position = jnp.arange(query_length, dtype="i4")
+        memory_position = jnp.arange(key_length, dtype="i4")
 
         relative_position = memory_position[receivers] - context_position[senders]
         relative_position_bucket = self._relative_position_bucket(
-            relative_position,
+            relative_position[..., None],
             bidirectional=(not self.causal),
             num_buckets=self.relative_attention_num_buckets,
             max_distance=self.relative_attention_max_distance,
@@ -460,15 +460,11 @@ class FlaxT5Attention(nn.Module):
             self.variables["cache"]["cache_index"] if (self.has_variable("cache", "cached_key") and self.causal) else 0
         )
 
-        call(lambda x: print(f'====\n init cache:{x}'), init_cache)
-        call(lambda x: print(f'has cache:{x}'), self.has_variable("cache", "cached_key"))
-        call(lambda x: print(f'causal:{x}'), self.causal)
-        call(lambda x: print(f'q size:{x}'), query_states.shape[1])
-
         if self.causal:
             # fast decoding for generate requires special attention_mask
-
             if self.has_variable("cache", "cached_key"):
+                # during autoregressive decoding, the current query token is remapped
+                # as sender 0, but should really be causal_attention_mask_shift
                 senders = jnp.full(senders.shape, 0)
                 causal_mask = receivers <= causal_attention_mask_shift
             else:
