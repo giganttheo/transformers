@@ -450,6 +450,12 @@ class FlaxT5Attention(nn.Module):
             senders = jnp.array([[[0]]*self.n_heads]*batch_size, dtype=jnp.uint16)
             graph_mask = jnp.array([[[0]]*self.n_heads]*batch_size, dtype = "i4")
 
+        attn_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)))
+        # merge attention mask with graph mask
+        if attention_mask is not None:
+            # TODO check if this is supposed to be receivers or senders (mb not both)
+            graph_mask = graph_mask * attn_mask_2_graph_mask(attention_mask, receivers) * attn_mask_2_graph_mask(attention_mask, senders)
+
         # for fast decoding causal attention mask should be shifted
         causal_attention_mask_shift = (
             self.variables["cache"]["cache_index"] if (self.has_variable("cache", "cached_key") and self.causal) else 0
@@ -468,8 +474,8 @@ class FlaxT5Attention(nn.Module):
                 #this is reproducing the dynamic_slice + broadcast_to combo
                 #works for 1 token at a time decoding only (ie seq_length==1)
                 senders = jnp.full(senders.shape, causal_attention_mask_shift)
-            
-            if self.has_variable("cache", "cached_key"):
+                causal_mask = receivers <= senders
+            elif self.has_variable("cache", "cached_key"):
                 causal_mask = receivers <= causal_attention_mask_shift
             else:
                 causal_mask = receivers <= senders
@@ -485,12 +491,6 @@ class FlaxT5Attention(nn.Module):
                 #causal cache mask to only attend to the tokens up to the current token
                 pad_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)), in_axes=(None, 0))
                 graph_mask = graph_mask * pad_mask_2_graph_mask(pad_mask, receivers)
-
-        attn_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)))
-        # merge attention mask with graph mask
-        if attention_mask is not None:
-            # TODO check if this is supposed to be receivers or senders (mb not both)
-            graph_mask = graph_mask * attn_mask_2_graph_mask(attention_mask, receivers) * attn_mask_2_graph_mask(attention_mask, senders)
 
         # replace masked positions with -10_000
         mask_value = jnp.finfo(self.dtype).min
