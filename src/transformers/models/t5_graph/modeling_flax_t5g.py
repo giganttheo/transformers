@@ -398,16 +398,15 @@ class FlaxT5Attention(nn.Module):
         query_length = key_length if cache_is_filled else query_states.shape[1]
 
         # # if key and values are already calculated, only the last query position bias should be taken
-        # if cache_is_filled and self.has_relative_attention_bias:
-        #     #this is reproducing the dynamic_slice + broadcast_to combo
-        #     #works for 1 token at a time decoding only (ie seq_length==1)
-        #     current_token_sender = jnp.full(senders.shape, causal_attention_mask_shift)
-        #     position_bias = self.compute_bias_sparse(query_length, key_length, receivers, current_token_sender)
-        if self.has_relative_attention_bias:
+        if cache_is_filled and self.has_relative_attention_bias:
+            #this is reproducing the dynamic_slice + broadcast_to combo
+            #works for 1 token at a time decoding only (ie seq_length==1)
+            current_token_sender = jnp.full(senders.shape, causal_attention_mask_shift)
+            position_bias = self.compute_bias_sparse(query_length, key_length, receivers, current_token_sender)
+        elif self.has_relative_attention_bias:
             position_bias = self.compute_bias_sparse(query_length, key_length, receivers, senders)
         else: #attention_mask is never None
             position_bias = jnp.zeros_like(attention_mask, dtype=self.dtype)
-
         return position_bias
 
     def __call__(
@@ -469,13 +468,8 @@ class FlaxT5Attention(nn.Module):
         if self.causal:
             # fast decoding for generate requires special attention_mask
 
-            # what is initcache doing? i suppose it is True in encdec attention but not in decself
-            if self.has_variable("cache", "cached_key") and self.has_relative_attention_bias and (not init_cache):
-                #this is reproducing the dynamic_slice + broadcast_to combo
-                #works for 1 token at a time decoding only (ie seq_length==1)
-                senders = jnp.full(senders.shape, 0)
-            
             if self.has_variable("cache", "cached_key"):
+                senders = jnp.full(senders.shape, 0)
                 causal_mask = receivers <= causal_attention_mask_shift
             else:
                 causal_mask = receivers <= senders
