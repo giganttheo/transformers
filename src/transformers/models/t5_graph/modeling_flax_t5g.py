@@ -392,7 +392,7 @@ class FlaxT5Attention(nn.Module):
     def _create_position_bias_sparse(
         self, key_states, query_states, attention_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift
     ):
-        cache_is_filled = self.causal and self.has_variable("cache", "cached_key") and (not init_cache)
+        cache_is_filled = self.has_variable("cache", "cached_key") and (not init_cache) #self.causal and
         key_length = key_states.shape[1]
         query_length = key_length if cache_is_filled else query_states.shape[1]
 
