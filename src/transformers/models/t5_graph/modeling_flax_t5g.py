@@ -495,6 +495,10 @@ class FlaxT5Attention(nn.Module):
         # compute position bias (only for first layer) ==> for all layers
         # TODO: find a way to reliably check if the attn pattern is different between layers
 
+        # position + graph doesnt work
+        # graph only
+        # position only doesnt work
+
         if position_bias is None or True : ####TODO: fix this (it does not work if recomputing the pos bias for some reason?)
             # compute position bias (only for first layer)
             tmp = self._create_position_bias_sparse(
@@ -503,6 +507,8 @@ class FlaxT5Attention(nn.Module):
 
             # if graph_mask is not None:
             #     tmp = tmp + graph_mask
+
+            tmp = graph_mask
 
             if position_bias is not None:
                 call(lambda x: print(f"distance with previous pos bias: {x}"), jnp.mean(jnp.abs(tmp - position_bias)))
