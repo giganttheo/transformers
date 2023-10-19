@@ -810,6 +810,7 @@ class FlaxT5Stack(nn.Module):
 
     def setup(self):
         self.causal = self.config.causal
+        print(self.config)
 
         self.block = FlaxT5BlockCollection(
             self.config, dtype=self.dtype, gradient_checkpointing=self.gradient_checkpointing
