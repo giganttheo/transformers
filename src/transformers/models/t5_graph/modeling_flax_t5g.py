@@ -390,7 +390,7 @@ class FlaxT5Attention(nn.Module):
         return key, value, causal_mask
 
     def _create_position_bias_sparse(
-        self, key_states, query_states, attention_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift
+        self, key_states, query_states, attention_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift, has_relative_attention_bias
     ):
         cache_is_filled = self.causal and self.has_variable("cache", "cached_key") and (not init_cache)
         key_length = key_states.shape[1]
@@ -403,7 +403,7 @@ class FlaxT5Attention(nn.Module):
             #works for 1 token at a time decoding only (ie seq_length==1)
             current_token_sender = jnp.full(senders.shape, causal_attention_mask_shift)
             position_bias = self.compute_bias_sparse(query_length, key_length, receivers, current_token_sender)
-        elif self.has_relative_attention_bias:
+        elif has_relative_attention_bias:
             call(lambda x: print("mask shift (no cache filled):", x), causal_attention_mask_shift)
             position_bias = self.compute_bias_sparse(query_length, key_length, receivers, senders)
         else: #attention_mask is never None
@@ -504,7 +504,7 @@ class FlaxT5Attention(nn.Module):
         if position_bias is None or True : ####TODO: fix this (it does not work if recomputing the pos bias for some reason?)
             # compute position bias (only for first layer)
             tmp = self._create_position_bias_sparse(
-                key_states, query_states, graph_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift
+                key_states, query_states, graph_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift, position_bias is not None
             )
 
             # if graph_mask is not None:
