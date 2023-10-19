@@ -514,7 +514,8 @@ class FlaxT5Attention(nn.Module):
             else:
                 call(lambda x: print(f"pos is None, shape is: {x}"), tmp.shape)
 
-            # position_bias = tmp
+            if position_bias is None:
+                position_bias = tmp
 
         # TODO: add rng (via dropout?)
         # # create dropout rng
