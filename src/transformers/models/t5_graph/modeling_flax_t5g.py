@@ -395,7 +395,7 @@ class FlaxT5Attention(nn.Module):
         cache_is_filled = self.causal and self.has_variable("cache", "cached_key") and (not init_cache)
         key_length = key_states.shape[1]
         query_length = key_length if cache_is_filled else query_states.shape[1]
-
+        call(lambda x: print("pos enc?:", x), self.has_relative_attention_bias)
         # # if key and values are already calculated, only the last query position bias should be taken
         if cache_is_filled and self.has_relative_attention_bias:
             call(lambda x: print("mask shift (cache filled):", x), causal_attention_mask_shift)
