@@ -505,6 +505,8 @@ class FlaxT5Attention(nn.Module):
             if position_bias is not None:
                 call(lambda x: print(f"distance with previous pos bias: {x}"), jnp.mean(jnp.abs(tmp - position_bias)))
                 call(lambda x: print(f"shape pos bias: {x}"), tmp.shape)
+            else:
+                call(lambda x: print(f"pos is None, shape is: {x}"), tmp.shape)
 
             position_bias = tmp
 
