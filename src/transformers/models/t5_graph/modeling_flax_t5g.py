@@ -498,8 +498,8 @@ class FlaxT5Attention(nn.Module):
             tmp = self._create_position_bias_sparse(
                 key_states, query_states, graph_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift
             )
-
-            call(lambda x: print(f"distance with previous pos bias: {x}"), jnp.mean(jnp.abs(tmp - position_bias)))
+            if position_bias is not None:
+                call(lambda x: print(f"distance with previous pos bias: {x}"), jnp.mean(jnp.abs(tmp - position_bias)))
 
             position_bias = tmp
 
