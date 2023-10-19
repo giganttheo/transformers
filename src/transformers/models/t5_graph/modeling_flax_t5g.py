@@ -501,14 +501,14 @@ class FlaxT5Attention(nn.Module):
                 key_states, query_states, graph_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift
             )
 
-            if graph_mask is not None:
-                tmp = tmp + graph_mask
+            # if graph_mask is not None:
+            #     tmp = tmp + graph_mask
 
-            # if position_bias is not None:
-            #     call(lambda x: print(f"distance with previous pos bias: {x}"), jnp.mean(jnp.abs(tmp - position_bias)))
-            #     call(lambda x: print(f"shape pos bias: {x}"), tmp.shape)
-            # else:
-            #     call(lambda x: print(f"pos is None, shape is: {x}"), tmp.shape)
+            if position_bias is not None:
+                call(lambda x: print(f"distance with previous pos bias: {x}"), jnp.mean(jnp.abs(tmp - position_bias)))
+                call(lambda x: print(f"shape pos bias: {x}"), tmp.shape)
+            else:
+                call(lambda x: print(f"pos is None, shape is: {x}"), tmp.shape)
 
             position_bias = tmp
 
@@ -814,7 +814,6 @@ class FlaxT5Stack(nn.Module):
 
     def setup(self):
         self.causal = self.config.causal
-        print(self.config)
 
         self.block = FlaxT5BlockCollection(
             self.config, dtype=self.dtype, gradient_checkpointing=self.gradient_checkpointing
