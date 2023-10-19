@@ -490,31 +490,13 @@ class FlaxT5Attention(nn.Module):
             jnp.full(graph_mask.shape, mask_value).astype(self.dtype),
         )
 
-        # if position_bias is None or position_bias.shape != graph_mask.shape:
-        # compute position bias (only for first layer) ==> for all layers
-        # TODO: find a way to reliably check if the attn pattern is different between layers
+        # compute position bias
+        position_bias = self._create_position_bias_sparse(
+            key_states, query_states, graph_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift,
+        )
 
-        # position + graph doesnt work
-        # graph only works
-        # position only doesnt work
-
-        if position_bias is None or True : ####TODO: fix this (it does not work if recomputing the pos bias for some reason?)
-            # compute position bias (only for first layer)
-            tmp = self._create_position_bias_sparse(
-                key_states, query_states, graph_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift,
-            )
-
-            # if graph_mask is not None:
-            #     tmp = tmp + graph_mask
-
-            if position_bias is not None:
-                call(lambda x: print(f"distance with given pos bias: {x}"), jnp.mean(jnp.abs(tmp - position_bias)))
-                call(lambda x: print(f"shape pos bias: {x}"), tmp.shape)
-            else:
-                call(lambda x: print(f"pos is None, shape is: {x}"), tmp.shape)
-
-            if position_bias is None:
-                position_bias = tmp
+        if graph_mask is not None:
+            position_bias = position_bias + graph_mask
 
         # TODO: add rng (via dropout?)
         # # create dropout rng
@@ -736,7 +718,7 @@ class FlaxT5BlockCollection(nn.Module):
             self.blocks = [
                 FlaxT5CheckpointLayer(
                     self.config,
-                    has_relative_attention_bias=True,
+                    has_relative_attention_bias= True,
                     dtype=self.dtype,
                     name=str(i),
                 )
@@ -746,7 +728,7 @@ class FlaxT5BlockCollection(nn.Module):
             self.blocks = [
                 FlaxT5LayerCollection(
                     self.config,
-                    has_relative_attention_bias=True,
+                    has_relative_attention_bias= True,
                     dtype=self.dtype,
                     name=str(i),
                 )
