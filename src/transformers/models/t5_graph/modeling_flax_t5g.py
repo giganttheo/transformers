@@ -395,16 +395,13 @@ class FlaxT5Attention(nn.Module):
         cache_is_filled = self.causal and self.has_variable("cache", "cached_key") and (not init_cache)
         key_length = key_states.shape[1]
         query_length = key_length if cache_is_filled else query_states.shape[1]
-        call(lambda x: print("pos enc?:", x), self.has_relative_attention_bias)
-        # # if key and values are already calculated, only the last query position bias should be taken
+        # if key and values are already calculated, only the last query position bias should be taken
         if cache_is_filled and self.has_relative_attention_bias:
-            call(lambda x: print("mask shift (cache filled):", x), causal_attention_mask_shift)
             #this is reproducing the dynamic_slice + broadcast_to combo
             #works for 1 token at a time decoding only (ie seq_length==1)
             current_token_sender = jnp.full(senders.shape, causal_attention_mask_shift)
             position_bias = self.compute_bias_sparse(query_length, key_length, receivers, current_token_sender)
         elif has_relative_attention_bias:
-            call(lambda x: print("mask shift (no cache filled):", x), causal_attention_mask_shift)
             position_bias = self.compute_bias_sparse(query_length, key_length, receivers, senders)
         else: #attention_mask is never None
             position_bias = jnp.zeros_like(attention_mask, dtype=self.dtype)
@@ -739,7 +736,7 @@ class FlaxT5BlockCollection(nn.Module):
             self.blocks = [
                 FlaxT5CheckpointLayer(
                     self.config,
-                    has_relative_attention_bias=(i == 0),
+                    has_relative_attention_bias=True,
                     dtype=self.dtype,
                     name=str(i),
                 )
@@ -749,7 +746,7 @@ class FlaxT5BlockCollection(nn.Module):
             self.blocks = [
                 FlaxT5LayerCollection(
                     self.config,
-                    has_relative_attention_bias=(i == 0),
+                    has_relative_attention_bias=True,
                     dtype=self.dtype,
                     name=str(i),
                 )
