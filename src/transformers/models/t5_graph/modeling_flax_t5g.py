@@ -392,12 +392,13 @@ class FlaxT5Attention(nn.Module):
     def _create_position_bias_sparse(
         self, key_states, query_states, attention_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift
     ):
-        cache_is_filled = self.has_variable("cache", "cached_key") and (not init_cache) #self.causal and
+        cache_is_filled = self.causal and self.has_variable("cache", "cached_key") and (not init_cache)
         key_length = key_states.shape[1]
         query_length = key_length if cache_is_filled else query_states.shape[1]
 
         # # if key and values are already calculated, only the last query position bias should be taken
         if cache_is_filled and self.has_relative_attention_bias:
+            call(lambda x: print("mask shift:", x), causal_attention_mask_shift)
             #this is reproducing the dynamic_slice + broadcast_to combo
             #works for 1 token at a time decoding only (ie seq_length==1)
             current_token_sender = jnp.full(senders.shape, causal_attention_mask_shift)
