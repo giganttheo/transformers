@@ -14,7 +14,6 @@
 # limitations under the License.
 """ Flax T5 model."""
 
-
 import copy
 from dataclasses import field
 from typing import Any, Callable, Iterable, Mapping, Optional, Union, Tuple

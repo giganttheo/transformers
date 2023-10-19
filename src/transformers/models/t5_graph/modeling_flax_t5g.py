@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2021 T5 Authors and HuggingFace Inc. team.
+# Adapted from https://github.com/huggingface/transformers/blob/main/src/transformers/models/t5/modeling_flax_t5.py
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -59,14 +59,15 @@ _CONFIG_FOR_DOC = "T5Config"
 
 remat = nn_partitioning.remat
 
-
 def segment_softmax(logits: jnp.ndarray,
                     segment_ids: jnp.ndarray,
                     num_segments: Optional[int] = None,
                     indices_are_sorted: bool = False,
                     unique_indices: bool = False,
                     bucket_size=None) -> ArrayTree:
-  # segment_softmax inspired by jraph's implementation, but fixed to give the same results as jax.nn.softmax by using jax.ops segment functions
+  """
+  segment_softmax inspired by jraph's implementation, but fixed to give the same results as jax.nn.softmax by using jax.ops segment functions
+  """
   # First, subtract the segment max for numerical stability
   maxs = jax.ops.segment_max(logits, segment_ids, num_segments, indices_are_sorted,
                      unique_indices, bucket_size=bucket_size)
@@ -79,10 +80,13 @@ def segment_softmax(logits: jnp.ndarray,
   softmax = logits / normalizers
   return softmax
 
-#Graph attention
 @partial(jax.vmap, in_axes=(0,0,0,0,0,0,None)) #vectorize over batches
 @partial(jax.vmap, in_axes=(-2,-2,-2,0,0,0,None), out_axes=(-2))  #vectorize over heads
 def scaled_dot_product_attention_graph(q, k, v, receivers, senders, bias=None, dtype=None):
+  """
+  Computes the dot product attention according to the attention pattern specified by the graph defined
+  by the adjacency list (senders, receivers)
+  """
   q, k = nn.dtypes.promote_dtype(q, k, dtype=dtype)
   dtype = q.dtype
   bucket_size=1000
@@ -229,9 +233,6 @@ class FlaxT5LayerFF(nn.Module):
         hidden_states = hidden_states + self.dropout(forwarded_states, deterministic=deterministic)
         return hidden_states
 
-#TMP TODO
-from jax.experimental.host_callback import call
-
 class FlaxT5Attention(nn.Module):
     config: T5Config
     has_relative_attention_bias: bool = False
@@ -372,7 +373,6 @@ class FlaxT5Attention(nn.Module):
         cached_key = self.variable("cache", "cached_key", jnp.zeros, key.shape, key.dtype)
         cached_value = self.variable("cache", "cached_value", jnp.zeros, value.shape, value.dtype)
         cache_index = self.variable("cache", "cache_index", lambda: jnp.array(0, dtype=jnp.int32))
-        causal_mask=None
         if is_initialized:
             *batch_dims, max_length, num_heads, depth_per_head = cached_key.value.shape
             # update key, value caches with our new 1d spatial slices
@@ -384,10 +384,7 @@ class FlaxT5Attention(nn.Module):
             cached_value.value = value
             num_updated_cache_vectors = query.shape[1]
             cache_index.value = cache_index.value + num_updated_cache_vectors
-            # causal mask for cached decoder self-attention: our single query position should only attend to those key positions
-            # that have already been generated and cached, not the remaining zero elements.
-            causal_mask = jnp.arange(max_length) < cur_index + num_updated_cache_vectors
-        return key, value, causal_mask
+        return key, value
 
     def _create_position_bias_sparse(
         self, key_states, query_states, attention_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift
@@ -447,10 +444,9 @@ class FlaxT5Attention(nn.Module):
             senders = jnp.array([[[0]]*self.n_heads]*batch_size, dtype=jnp.uint16)
             graph_mask = jnp.array([[[0]]*self.n_heads]*batch_size, dtype = "i4")
 
-        attn_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)))
-        # merge attention mask with graph mask
         if attention_mask is not None:
-            # TODO check if this is supposed to be receivers or senders (mb not both)
+            # merge the input attention mask with the graph mask
+            attn_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)))
             graph_mask = graph_mask * attn_mask_2_graph_mask(attention_mask, receivers) * attn_mask_2_graph_mask(attention_mask, senders)
 
         # for fast decoding causal attention mask should be shifted
@@ -461,9 +457,9 @@ class FlaxT5Attention(nn.Module):
         if self.causal:
             # fast decoding for generate requires special attention_mask
             if self.has_variable("cache", "cached_key"):
-                # during autoregressive decoding, the current query token is remapped
-                # as sender 0, but should really be causal_attention_mask_shift
-                senders = jnp.full(senders.shape, 0)
+                # during autoregressive decoding, the current query token was remapped
+                # to sender 0, but should really be causal_attention_mask_shift
+                # senders = jnp.full(senders.shape, 0)
                 causal_mask = receivers <= causal_attention_mask_shift
             else:
                 causal_mask = receivers <= senders
@@ -472,15 +468,9 @@ class FlaxT5Attention(nn.Module):
         # During fast autoregressive decoding, we feed one position at a time,
         # and cache the keys and values step by step.
         if self.causal and (self.has_variable("cache", "cached_key") or init_cache):
-            key_states, value_states, pad_mask = self._concatenate_to_cache(
+            key_states, value_states = self._concatenate_to_cache(
                 key_states, value_states, query_states
             )
-            pad_mask=None
-            if pad_mask is not None:
-                #pretty sure this is redundant with the causal mask
-                #causal cache mask to only attend to the tokens up to the current token
-                pad_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)), in_axes=(None, 0))
-                graph_mask = graph_mask * pad_mask_2_graph_mask(pad_mask, receivers)
 
         # replace masked positions with -10_000
         mask_value = jnp.finfo(self.dtype).min
@@ -498,7 +488,7 @@ class FlaxT5Attention(nn.Module):
         if graph_mask is not None:
             position_bias = position_bias + graph_mask
 
-        # TODO: add rng (via dropout?)
+        # TODO: add rng for dropout
         # # create dropout rng
         # dropout_rng = None
         # if not deterministic and self.dropout > 0.0:
@@ -718,7 +708,7 @@ class FlaxT5BlockCollection(nn.Module):
             self.blocks = [
                 FlaxT5CheckpointLayer(
                     self.config,
-                    has_relative_attention_bias= True,
+                    has_relative_attention_bias= True, #with arbitrary attention patterns, every block needs to compute position embeddings
                     dtype=self.dtype,
                     name=str(i),
                 )
@@ -728,7 +718,7 @@ class FlaxT5BlockCollection(nn.Module):
             self.blocks = [
                 FlaxT5LayerCollection(
                     self.config,
-                    has_relative_attention_bias= True,
+                    has_relative_attention_bias= True, #with arbitrary attention patterns, every block needs to compute position embeddings
                     dtype=self.dtype,
                     name=str(i),
                 )
