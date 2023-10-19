@@ -387,7 +387,6 @@ class FlaxT5Attention(nn.Module):
             # causal mask for cached decoder self-attention: our single query position should only attend to those key positions
             # that have already been generated and cached, not the remaining zero elements.
             causal_mask = jnp.arange(max_length) < cur_index + num_updated_cache_vectors
-
         return key, value, causal_mask
 
     def _create_position_bias_sparse(
@@ -494,11 +493,15 @@ class FlaxT5Attention(nn.Module):
         # compute position bias (only for first layer) ==> for all layers
         # TODO: find a way to reliably check if the attn pattern is different between layers
 
-        if position_bias is None or True:
+        if position_bias is None or True : ####TODO: fix this (it does not work if recomputing the pos bias for some reason?)
             # compute position bias (only for first layer)
-            position_bias = self._create_position_bias_sparse(
+            tmp = self._create_position_bias_sparse(
                 key_states, query_states, graph_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift
             )
+
+            call(lambda x: print(f"distance with previous pos bias: {x}"), jnp.mean(jnp.abs(tmp - position_bias)))
+
+            position_bias = tmp
 
             if graph_mask is not None:
                 position_bias = position_bias + graph_mask
