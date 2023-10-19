@@ -476,7 +476,9 @@ class FlaxT5Attention(nn.Module):
             key_states, value_states, pad_mask = self._concatenate_to_cache(
                 key_states, value_states, query_states
             )
+            pad_mask=None
             if pad_mask is not None:
+                #pretty sure this is redundant with the causal mask
                 #causal cache mask to only attend to the tokens up to the current token
                 pad_mask_2_graph_mask = jax.vmap(jax.vmap(lambda mask, ids: mask[ids], in_axes=(None, 0)), in_axes=(None, 0))
                 graph_mask = graph_mask * pad_mask_2_graph_mask(pad_mask, receivers)
@@ -502,11 +504,11 @@ class FlaxT5Attention(nn.Module):
             if graph_mask is not None:
                 tmp = tmp + graph_mask
 
-            if position_bias is not None:
-                call(lambda x: print(f"distance with previous pos bias: {x}"), jnp.mean(jnp.abs(tmp - position_bias)))
-                call(lambda x: print(f"shape pos bias: {x}"), tmp.shape)
-            else:
-                call(lambda x: print(f"pos is None, shape is: {x}"), tmp.shape)
+            # if position_bias is not None:
+            #     call(lambda x: print(f"distance with previous pos bias: {x}"), jnp.mean(jnp.abs(tmp - position_bias)))
+            #     call(lambda x: print(f"shape pos bias: {x}"), tmp.shape)
+            # else:
+            #     call(lambda x: print(f"pos is None, shape is: {x}"), tmp.shape)
 
             position_bias = tmp
 
