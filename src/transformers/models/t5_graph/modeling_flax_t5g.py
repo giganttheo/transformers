@@ -392,7 +392,7 @@ class FlaxT5Attention(nn.Module):
     def _create_position_bias_sparse(
         self, key_states, query_states, attention_mask, receivers, senders, init_cache, seq_length, causal_attention_mask_shift
     ):
-        cache_is_filled = self.has_variable("cache", "cached_key") and (not init_cache) #self.causal and
+        cache_is_filled = self.causal and self.has_variable("cache", "cached_key") and (not init_cache)
         key_length = key_states.shape[1]
         query_length = key_length if cache_is_filled else query_states.shape[1]
 
@@ -509,12 +509,12 @@ class FlaxT5Attention(nn.Module):
             #     tmp = tmp + graph_mask
 
             if position_bias is not None:
-                call(lambda x: print(f"distance with previous pos bias: {x}"), jnp.mean(jnp.abs(tmp - position_bias)))
+                call(lambda x: print(f"distance with given pos bias: {x}"), jnp.mean(jnp.abs(tmp - position_bias)))
                 call(lambda x: print(f"shape pos bias: {x}"), tmp.shape)
             else:
                 call(lambda x: print(f"pos is None, shape is: {x}"), tmp.shape)
 
-            position_bias = tmp
+            # position_bias = tmp
 
         # TODO: add rng (via dropout?)
         # # create dropout rng
