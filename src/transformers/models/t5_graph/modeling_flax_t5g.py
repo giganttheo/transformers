@@ -543,8 +543,8 @@ class FlaxT5Attention(nn.Module):
             # During fast autoregressive decoding, we feed one position at a time,
             # and cache the keys and values step by step.
             if self.causal and (self.has_variable("cache", "cached_key") or init_cache):
-                key_states, value_states, attention_mask = self._concatenate_to_cache(
-                    key_states, value_states, query_states, attention_mask
+                key_states, value_states = self._concatenate_to_cache(
+                    key_states, value_states, query_states
                 )
 
             # replace masked positions with -10_000
