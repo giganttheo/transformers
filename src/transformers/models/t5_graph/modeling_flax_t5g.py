@@ -511,9 +511,9 @@ class FlaxT5Attention(nn.Module):
                 senders,
                 position_bias,
                 self.dtype)
-
         else:
             print("this case")
+            print(self.variables["params"].keys())
             # regular attention (for decoder during training)
             # for fast decoding causal attention mask should be shifted
             causal_attention_mask_shift = (
