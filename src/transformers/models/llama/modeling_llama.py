@@ -206,7 +206,7 @@ class LlamaRotaryEmbedding(nn.Module):
         # Core RoPE block
         inv_freq_expanded = (self.inv_freq[None, :, None].float().expand(position_ids.shape[0], -1, 1))
         print(f"inv_freq_expanded shape {inv_freq_expanded.shape}")
-        inv_freq_expanded /= rope_scale
+        inv_freq_expanded = inv_freq_expanded / rope_scale
         print(f"after scaling: {inv_freq_expanded.shape}")
         position_ids_expanded = position_ids[:, None, :].float()
         print(f"position_ids_expanded shape {position_ids_expanded.shape}")
