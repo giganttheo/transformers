@@ -196,12 +196,12 @@ class LlamaRotaryEmbedding(nn.Module):
             self.max_seq_len_cached = self.original_max_seq_len
 
     @torch.no_grad()
-    def forward(self, x, position_ids):
+    def forward(self, x, position_ids, rope_scale=1.):
         if "dynamic" in self.rope_type:
             self._dynamic_frequency_update(position_ids, device=x.device)
 
         # Core RoPE block
-        inv_freq_expanded = self.inv_freq[None, :, None].float().expand(position_ids.shape[0], -1, 1)
+        inv_freq_expanded = (self.inv_freq[None, :, None].float().expand(position_ids.shape[0], -1, 1) / rope_scale)
         position_ids_expanded = position_ids[:, None, :].float()
         # Force float32 (see https://github.com/huggingface/transformers/pull/29285)
         device_type = x.device.type
@@ -921,6 +921,7 @@ class LlamaModel(LlamaPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
         cache_position: Optional[torch.LongTensor] = None,
+        rope_scale: Optional[torch.Tensor] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -968,7 +969,7 @@ class LlamaModel(LlamaPreTrainedModel):
         hidden_states = inputs_embeds
 
         # create position embeddings to be shared across the decoder layers
-        position_embeddings = self.rotary_emb(hidden_states, position_ids)
+        position_embeddings = self.rotary_emb(hidden_states, position_ids, rope_scale)
 
         # decoder layers
         all_hidden_states = () if output_hidden_states else None
@@ -1143,6 +1144,7 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         return_dict: Optional[bool] = None,
         cache_position: Optional[torch.LongTensor] = None,
         num_logits_to_keep: int = 0,
+        rope_scale: Optional[torch.Tensor] = None,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         r"""
         Args:
@@ -1245,6 +1247,7 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         position_ids=None,
         use_cache=True,
         num_logits_to_keep=0,
+        rope_scale=1.,
         **kwargs,
     ):
         # If we have cache: let's slice `input_ids` through `cache_position`, to keep only the unprocessed tokens
@@ -1303,6 +1306,7 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
                 "use_cache": use_cache,
                 "attention_mask": attention_mask,
                 "num_logits_to_keep": num_logits_to_keep,
+                "rope_scale": rope_scale
             }
         )
         return model_inputs
