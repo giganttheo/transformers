@@ -196,13 +196,21 @@ class LlamaRotaryEmbedding(nn.Module):
             self.max_seq_len_cached = self.original_max_seq_len
 
     @torch.no_grad()
-    def forward(self, x, position_ids, rope_scale=1.):
+    def forward(self, x, position_ids, rope_scale=None):
         if "dynamic" in self.rope_type:
             self._dynamic_frequency_update(position_ids, device=x.device)
 
+        if rope_scale is None:
+            rope_scale = 1.
+
         # Core RoPE block
-        inv_freq_expanded = (self.inv_freq[None, :, None].float().expand(position_ids.shape[0], -1, 1) / rope_scale)
+        inv_freq_expanded = (self.inv_freq[None, :, None].float().expand(position_ids.shape[0], -1, 1))
+        print(f"inv_freq_expanded shape {inv_freq_expanded.shape}")
+        inv_freq_expanded /= rope_scale
+        print(f"after scaling: {inv_freq_expanded.shape}")
         position_ids_expanded = position_ids[:, None, :].float()
+        print(f"position_ids_expanded shape {position_ids_expanded.shape}")
+
         # Force float32 (see https://github.com/huggingface/transformers/pull/29285)
         device_type = x.device.type
         device_type = device_type if isinstance(device_type, str) and device_type != "mps" else "cpu"
