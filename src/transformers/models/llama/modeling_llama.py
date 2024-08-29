@@ -979,6 +979,7 @@ class LlamaModel(LlamaPreTrainedModel):
         hidden_states = inputs_embeds
 
         # create position embeddings to be shared across the decoder layers
+        print(rope_scale.shape, input_ids.shape, cache_position.shape)
         position_embeddings = self.rotary_emb(hidden_states, position_ids, rope_scale[input_ids[:, cache_position]])
 
         # decoder layers
