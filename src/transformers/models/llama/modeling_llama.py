@@ -1194,6 +1194,7 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
             cache_position=cache_position,
+            rope_scale=rope_scale,
         )
 
         hidden_states = outputs[0]
