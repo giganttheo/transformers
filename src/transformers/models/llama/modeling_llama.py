@@ -64,7 +64,6 @@ def _prepare_4d_causal_attention_mask_with_cache_position(
     device: torch.device,
     min_dtype: float,
     cache_position: torch.Tensor,
-    # cumsum_scaled_position: torch.Tensor,
     batch_size: int,
 ):
     """
@@ -983,9 +982,8 @@ class LlamaModel(LlamaPreTrainedModel):
         position_ids = scaled_distances.cumsum(-1) - scaled_distances[:, 0]
         if cumsum_scaled_position is None:
             cumsum_scaled_position = position_ids[:, -1]
-        else:
-            print(cumsum_scaled_position)
-        print(position_ids)
+        print(cumsum_scaled_position)
+        print("pos ids: " , position_ids)
         position_embeddings = self.rotary_emb(hidden_states, position_ids)
 
         # decoder layers
