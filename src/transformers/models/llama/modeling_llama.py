@@ -197,19 +197,13 @@ class LlamaRotaryEmbedding(nn.Module):
 
     # actually, we will need to compute the gradient here 
     # @torch.no_grad()
-    def forward(self, x, position_ids, rope_scale=None):
+    def forward(self, x, position_ids):
         if "dynamic" in self.rope_type:
             self._dynamic_frequency_update(position_ids, device=x.device)
-
-        # if rope_scale is None:
-        #     rope_scale = 1.
 
         # Core RoPE block
         inv_freq_expanded = (self.inv_freq[None, :, None].float().expand(position_ids.shape[0], -1, 1))
         position_ids_expanded = position_ids[:, None, :].float()
-        
-        # # TODO: instead of scaling the position ids, they should be recomputed with scaling 
-        # position_ids_expanded *= rope_scale
 
         # Force float32 (see https://github.com/huggingface/transformers/pull/29285)
         device_type = x.device.type
@@ -982,6 +976,7 @@ class LlamaModel(LlamaPreTrainedModel):
         # TODO: need to cache the scaled position ids and scale with new ones
         scaled_distances = rope_scale[input_ids] # (bs, seq_len)
         position_ids = scaled_distances.long().cumsum(-1) - scaled_distances[:, 0]
+        print(position_ids)
         position_embeddings = self.rotary_emb(hidden_states, position_ids)
 
         # decoder layers
