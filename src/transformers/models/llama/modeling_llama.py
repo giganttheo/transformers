@@ -195,23 +195,21 @@ class LlamaRotaryEmbedding(nn.Module):
             self.register_buffer("inv_freq", self.original_inv_freq, persistent=False)
             self.max_seq_len_cached = self.original_max_seq_len
 
-    @torch.no_grad()
+    # actually, we will need to compute the gradient here 
+    # @torch.no_grad()
     def forward(self, x, position_ids, rope_scale=None):
         if "dynamic" in self.rope_type:
             self._dynamic_frequency_update(position_ids, device=x.device)
 
-        if rope_scale is None:
-            rope_scale = 1.
+        # if rope_scale is None:
+        #     rope_scale = 1.
 
         # Core RoPE block
         inv_freq_expanded = (self.inv_freq[None, :, None].float().expand(position_ids.shape[0], -1, 1))
-        print(f"inv_freq_expanded shape {inv_freq_expanded.shape}")
-        # inv_freq_expanded = inv_freq_expanded / rope_scale
-        print(f"after scaling: {inv_freq_expanded.shape}")
         position_ids_expanded = position_ids[:, None, :].float()
-        print(f"position_ids_expanded shape {position_ids_expanded.shape}")
-        position_ids_expanded *= rope_scale
-        print(f"after scaling: {position_ids_expanded.shape}")
+        
+        # # TODO: instead of scaling the position ids, they should be recomputed with scaling 
+        # position_ids_expanded *= rope_scale
 
         # Force float32 (see https://github.com/huggingface/transformers/pull/29285)
         device_type = x.device.type
@@ -971,6 +969,7 @@ class LlamaModel(LlamaPreTrainedModel):
                 past_seen_tokens, past_seen_tokens + inputs_embeds.shape[1], device=inputs_embeds.device
             )
         if position_ids is None:
+            # this is during ar inference
             position_ids = cache_position.unsqueeze(0)
 
         causal_mask = self._update_causal_mask(
@@ -980,7 +979,10 @@ class LlamaModel(LlamaPreTrainedModel):
 
         # create position embeddings to be shared across the decoder layers
         # print(rope_scale.shape, input_ids.shape, cache_position.shape)
-        position_embeddings = self.rotary_emb(hidden_states, position_ids, rope_scale[input_ids])
+        # TODO: need to cache the scaled position ids and scale with new ones
+        scaled_distances = rope_scale[input_ids] # (bs, seq_len)
+        position_ids = scaled_distances.long().cumsum(-1) - scaled_distances[:, 0]
+        position_embeddings = self.rotary_emb(hidden_states, position_ids)
 
         # decoder layers
         all_hidden_states = () if output_hidden_states else None
