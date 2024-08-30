@@ -984,7 +984,7 @@ class LlamaModel(LlamaPreTrainedModel):
         if cumsum_scaled_position is None:
             scaled_distances = rope_scale[input_ids] # (bs, seq_len)
             position_ids = scaled_distances.cumsum(-1) - scaled_distances[:, 0]
-            cumsum_scaled_position = position_ids[:, -1]
+            cumsum_scaled_position = rope_scale[input_ids].sum(-1)
         print(cumsum_scaled_position)
         print("pos ids: " , position_ids)
         position_embeddings = self.rotary_emb(hidden_states, position_ids)
@@ -1294,8 +1294,9 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
                 # This `clone` call is needed to avoid recapturing cuda graphs with `torch.compile`'s  `mode="reduce-overhead`, as otherwise the input `position_ids` would have various stride during the decoding. Here, simply using `.contiguous()` is not sufficient as in the batch size = 1 case, `position_ids` is already contiguous but with varying stride which retriggers a capture.
                 position_ids = position_ids.clone(memory_format=torch.contiguous_format)
 
-            if cumsum_scaled_position is None:
-                cumsum_scaled_position = rope_scale[position_ids].sum(-1)
+        if cumsum_scaled_position is None:
+            cumsum_scaled_position = rope_scale[position_ids].sum(-1)
+            print(f"Initializing cumsum_scaled_position id as {cumsum_scaled_position}")
 
         # if `inputs_embeds` are passed, we only want to use them in the 1st generation step
         if inputs_embeds is not None and cache_position[0] == 0:
