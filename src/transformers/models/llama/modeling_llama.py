@@ -64,6 +64,7 @@ def _prepare_4d_causal_attention_mask_with_cache_position(
     device: torch.device,
     min_dtype: float,
     cache_position: torch.Tensor,
+    # cumsum_scaled_position: torch.Tensor,
     batch_size: int,
 ):
     """
@@ -412,7 +413,7 @@ class LlamaAttention(nn.Module):
 
         if past_key_value is not None:
             # sin and cos are specific to RoPE models; cache_position needed for the static cache
-            cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
+            cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position, "cumsum_scaled_position": position_ids[:, -1]}
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
 
         key_states = repeat_kv(key_states, self.num_key_value_groups)
@@ -512,7 +513,7 @@ class LlamaFlashAttention2(LlamaAttention):
 
         if past_key_value is not None:
             # sin and cos are specific to RoPE models; cache_position needed for the static cache
-            cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
+            cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position, "cumsum_scaled_position": position_ids[:, -1]}
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
 
         # TODO: These transpose are quite inefficient but Flash Attention requires the layout [batch_size, sequence_length, num_heads, head_dim]. We would need to refactor the KV cache
@@ -605,6 +606,7 @@ class LlamaSdpaAttention(LlamaAttention):
                 output_attentions=output_attentions,
                 use_cache=use_cache,
                 cache_position=cache_position,
+                cumsum_scaled_position=cumsum_scaled_position,
                 position_embeddings=position_embeddings,
             )
 
@@ -632,7 +634,7 @@ class LlamaSdpaAttention(LlamaAttention):
 
         if past_key_value is not None:
             # sin and cos are specific to RoPE models; cache_position needed for the static cache
-            cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
+            cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position, "cumsum_scaled_position": position_ids[:, -1]}
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
 
         key_states = repeat_kv(key_states, self.num_key_value_groups)
@@ -697,6 +699,7 @@ class LlamaDecoderLayer(nn.Module):
         output_attentions: Optional[bool] = False,
         use_cache: Optional[bool] = False,
         cache_position: Optional[torch.LongTensor] = None,
+        cumsum_scaled_position: Optional[torch.Tensor] = None,
         position_embeddings: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,  # will become mandatory in v4.45
         **kwargs,
     ) -> Tuple[torch.FloatTensor, Optional[Tuple[torch.FloatTensor, torch.FloatTensor]]]:
@@ -735,6 +738,7 @@ class LlamaDecoderLayer(nn.Module):
             output_attentions=output_attentions,
             use_cache=use_cache,
             cache_position=cache_position,
+            cumsum_scaled_position=cumsum_scaled_position,
             position_embeddings=position_embeddings,
             **kwargs,
         )
@@ -923,6 +927,7 @@ class LlamaModel(LlamaPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
         cache_position: Optional[torch.LongTensor] = None,
+        cumsum_scaled_position: Optional[torch.Tensor] = None,
         rope_scale: Optional[torch.Tensor] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
@@ -967,7 +972,7 @@ class LlamaModel(LlamaPreTrainedModel):
             position_ids = cache_position.unsqueeze(0)
 
         causal_mask = self._update_causal_mask(
-            attention_mask, inputs_embeds, cache_position, past_key_values, output_attentions
+            attention_mask, inputs_embeds, cache_position, cumsum_scaled_position, past_key_values, output_attentions
         )
         hidden_states = inputs_embeds
 
@@ -976,6 +981,10 @@ class LlamaModel(LlamaPreTrainedModel):
         # TODO: need to cache the scaled position ids and scale with new ones
         scaled_distances = rope_scale[input_ids] # (bs, seq_len)
         position_ids = scaled_distances.cumsum(-1) - scaled_distances[:, 0]
+        if cumsum_scaled_position is None:
+            cumsum_scaled_position = position_ids[:, -1]
+        else:
+            print(cumsum_scaled_position)
         print(position_ids)
         position_embeddings = self.rotary_emb(hidden_states, position_ids)
 
@@ -1009,6 +1018,7 @@ class LlamaModel(LlamaPreTrainedModel):
                     output_attentions=output_attentions,
                     use_cache=use_cache,
                     cache_position=cache_position,
+                    cumsum_scaled_position=cumsum_scaled_position,
                     position_embeddings=position_embeddings,
                 )
 
@@ -1044,6 +1054,7 @@ class LlamaModel(LlamaPreTrainedModel):
         attention_mask: torch.Tensor,
         input_tensor: torch.Tensor,
         cache_position: torch.Tensor,
+        cumsum_scaled_position: torch.Tensor,
         past_key_values: Cache,
         output_attentions: bool,
     ):
@@ -1089,6 +1100,7 @@ class LlamaModel(LlamaPreTrainedModel):
             device=device,
             min_dtype=min_dtype,
             cache_position=cache_position,
+            cumsum_scaled_position=cumsum_scaled_position,
             batch_size=input_tensor.shape[0],
         )
 
@@ -1151,6 +1163,7 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
         cache_position: Optional[torch.LongTensor] = None,
+        cumsum_scaled_position: Optional[torch.Tensor] = None,
         num_logits_to_keep: int = 0,
         rope_scale: Optional[torch.Tensor] = None,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
@@ -1202,6 +1215,7 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
             cache_position=cache_position,
+            cumsum_scaled_position=cumsum_scaled_position,
             rope_scale=rope_scale,
         )
 
@@ -1304,6 +1318,7 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
                 device=device,
                 min_dtype=min_dtype,
                 cache_position=cache_position,
+                cumsum_scaled_position=cumsum_scaled_position,
                 batch_size=batch_size,
             )
 
