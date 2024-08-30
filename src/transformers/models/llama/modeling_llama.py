@@ -975,7 +975,7 @@ class LlamaModel(LlamaPreTrainedModel):
         # print(rope_scale.shape, input_ids.shape, cache_position.shape)
         # TODO: need to cache the scaled position ids and scale with new ones
         scaled_distances = rope_scale[input_ids] # (bs, seq_len)
-        position_ids = scaled_distances.long().cumsum(-1) - scaled_distances[:, 0]
+        position_ids = scaled_distances.cumsum(-1) - scaled_distances[:, 0]
         print(position_ids)
         position_embeddings = self.rotary_emb(hidden_states, position_ids)
 
