@@ -978,9 +978,12 @@ class LlamaModel(LlamaPreTrainedModel):
         # create position embeddings to be shared across the decoder layers
         # print(rope_scale.shape, input_ids.shape, cache_position.shape)
         # TODO: need to cache the scaled position ids and scale with new ones
-        scaled_distances = rope_scale[input_ids] # (bs, seq_len)
-        position_ids = scaled_distances.cumsum(-1) - scaled_distances[:, 0]
+        if cumsum_scaled_position is not None:
+            scaled_distances = cumsum_scaled_position + rope_scale[input_ids] # (bs, seq_len)
+            position_ids = scaled_distances.cumsum(-1) - scaled_distances[:, 0]
         if cumsum_scaled_position is None:
+            scaled_distances = rope_scale[input_ids] # (bs, seq_len)
+            position_ids = scaled_distances.cumsum(-1) - scaled_distances[:, 0]
             cumsum_scaled_position = position_ids[:, -1]
         print(cumsum_scaled_position)
         print("pos ids: " , position_ids)
