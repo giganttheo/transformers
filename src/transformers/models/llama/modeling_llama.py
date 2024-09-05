@@ -1270,11 +1270,9 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         attention_mask=None,
         inputs_embeds=None,
         cache_position=None,
-        cumsum_scaled_position=None,
         position_ids=None,
         use_cache=True,
         num_logits_to_keep=0,
-        rope_scale=1.,
         **kwargs,
     ):
         # If we have cache: let's slice `input_ids` through `cache_position`, to keep only the unprocessed tokens
@@ -1295,10 +1293,6 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
 
                 # This `clone` call is needed to avoid recapturing cuda graphs with `torch.compile`'s  `mode="reduce-overhead`, as otherwise the input `position_ids` would have various stride during the decoding. Here, simply using `.contiguous()` is not sufficient as in the batch size = 1 case, `position_ids` is already contiguous but with varying stride which retriggers a capture.
                 position_ids = position_ids.clone(memory_format=torch.contiguous_format)
-
-        if cumsum_scaled_position is None:
-            cumsum_scaled_position = rope_scale[position_ids].sum(-1)
-            # print(f"Initializing cumsum_scaled_position id as {cumsum_scaled_position}")
 
         # if `inputs_embeds` are passed, we only want to use them in the 1st generation step
         if inputs_embeds is not None and cache_position[0] == 0:
@@ -1337,7 +1331,6 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
                 "use_cache": use_cache,
                 "attention_mask": attention_mask,
                 "num_logits_to_keep": num_logits_to_keep,
-                "rope_scale": rope_scale
             }
         )
         return model_inputs
