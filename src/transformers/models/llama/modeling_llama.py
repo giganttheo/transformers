@@ -979,6 +979,7 @@ class LlamaModel(LlamaPreTrainedModel):
         # print(rope_scale.shape, input_ids.shape, cache_position.shape)
         # TODO: need to cache the scaled position ids and scale with new ones
         if cumsum_scaled_position is not None:
+            # CACHE
             scaled_distances = cumsum_scaled_position + rope_scale[input_ids] # (bs, seq_len)
             position_ids = scaled_distances.cumsum(-1) - scaled_distances[:, 0]
         if cumsum_scaled_position is None:
@@ -1129,6 +1130,7 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
 
         # Initialize weights and apply final processing
         self.post_init()
+        self.rope_scale = torch.ones((config.vocab_size))
 
     def get_input_embeddings(self):
         return self.model.embed_tokens
@@ -1216,7 +1218,7 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
             return_dict=return_dict,
             cache_position=cache_position,
             cumsum_scaled_position=cumsum_scaled_position,
-            rope_scale=rope_scale,
+            rope_scale=rope_scale if rope_scale is not None else self.rope_scale,
         )
 
         hidden_states = outputs[0]
