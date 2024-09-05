@@ -985,8 +985,8 @@ class LlamaModel(LlamaPreTrainedModel):
             scaled_distances = rope_scale[input_ids] # (bs, seq_len)
             position_ids = scaled_distances.cumsum(-1) - scaled_distances[:, 0]
             cumsum_scaled_position = rope_scale[input_ids].sum(-1)
-        print(cumsum_scaled_position)
-        print("pos ids: " , position_ids)
+        # print(cumsum_scaled_position)
+        # print("pos ids: " , position_ids)
         position_embeddings = self.rotary_emb(hidden_states, position_ids)
 
         # decoder layers
@@ -1101,7 +1101,6 @@ class LlamaModel(LlamaPreTrainedModel):
             device=device,
             min_dtype=min_dtype,
             cache_position=cache_position,
-            cumsum_scaled_position=cumsum_scaled_position,
             batch_size=input_tensor.shape[0],
         )
 
@@ -1296,7 +1295,7 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
 
         if cumsum_scaled_position is None:
             cumsum_scaled_position = rope_scale[position_ids].sum(-1)
-            print(f"Initializing cumsum_scaled_position id as {cumsum_scaled_position}")
+            # print(f"Initializing cumsum_scaled_position id as {cumsum_scaled_position}")
 
         # if `inputs_embeds` are passed, we only want to use them in the 1st generation step
         if inputs_embeds is not None and cache_position[0] == 0:
@@ -1324,7 +1323,6 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
                 device=device,
                 min_dtype=min_dtype,
                 cache_position=cache_position,
-                cumsum_scaled_position=cumsum_scaled_position,
                 batch_size=batch_size,
             )
 
