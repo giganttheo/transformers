@@ -196,7 +196,7 @@ class LlamaRotaryEmbedding(nn.Module):
             self.max_seq_len_cached = self.original_max_seq_len
 
     # actually, we will need to compute the gradient here 
-    # @torch.no_grad()
+    @torch.no_grad()
     def forward(self, x, position_ids):
         if "dynamic" in self.rope_type:
             self._dynamic_frequency_update(position_ids, device=x.device)
