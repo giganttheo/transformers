@@ -195,7 +195,7 @@ class LlamaRotaryEmbedding(nn.Module):
             self.register_buffer("inv_freq", self.original_inv_freq, persistent=False)
             self.max_seq_len_cached = self.original_max_seq_len
 
-    # actually, we will need to compute the gradient here 
+    # actually, we might need to compute the gradient here 
     @torch.no_grad()
     def forward(self, x, position_ids):
         if "dynamic" in self.rope_type:
@@ -985,7 +985,9 @@ class LlamaModel(LlamaPreTrainedModel):
         if cumsum_scaled_position is None:
             scaled_distances = rope_scale[input_ids] # (bs, seq_len)
             # print(scaled_distances.shape)
-            position_ids = (scaled_distances - scaled_distances[:, 0][:, None]).cumsum(-1)
+            # position_ids = (scaled_distances - scaled_distances[:, 0][:, None]).cumsum(-1)
+            
+            position_ids = (scaled_distances).cumsum(-1)
             cumsum_scaled_position = rope_scale[input_ids].sum(-1)
         # print(cumsum_scaled_position)
         # print("pos ids: " , position_ids)
