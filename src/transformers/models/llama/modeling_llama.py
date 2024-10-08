@@ -986,12 +986,11 @@ class LlamaModel(LlamaPreTrainedModel):
         #     scaled_distances = rope_scale[input_ids] # (bs, seq_len)
         #     # print(scaled_distances.shape)
         #     # position_ids = (scaled_distances - scaled_distances[:, 0][:, None]).cumsum(-1)
-            
         #     position_ids = (scaled_distances).cumsum(-1)
         #     cumsum_scaled_position = rope_scale[input_ids].sum(-1)
         # print(cumsum_scaled_position)
         scaled_distances = rope_scale[input_ids]
-        position_ids = (scaled_distances[:, None]).cumsum(-1)
+        position_ids = (scaled_distances).cumsum(-1)
         print("pos ids: " , position_ids)
         position_embeddings = self.rotary_emb(hidden_states, position_ids)
 
