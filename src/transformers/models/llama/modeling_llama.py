@@ -987,7 +987,7 @@ class LlamaModel(LlamaPreTrainedModel):
             # print(scaled_distances.shape)
             # position_ids = (scaled_distances - scaled_distances[:, 0][:, None]).cumsum(-1)
             
-            position_ids = (scaled_distances - scaled_distances[:, 0][:, None]).cumsum(-1)
+            position_ids = (scaled_distances).cumsum(-1)
             cumsum_scaled_position = rope_scale[input_ids].sum(-1)
         # print(cumsum_scaled_position)
         print("pos ids: " , position_ids)
