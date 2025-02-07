@@ -764,7 +764,9 @@ class LlamaForCausalLM(LlamaPreTrainedModel, GenerationMixin):
 
         # Initialize weights and apply final processing
         self.post_init()
-        self.rope_scale = torch.ones((config.vocab_size))
+        self.rope_scale = nn.Parameter(torch.ones((config.vocab_size)))
+        nn.init.ones_(self.rope_scale)
+        
 
     def get_input_embeddings(self):
         return self.model.embed_tokens
