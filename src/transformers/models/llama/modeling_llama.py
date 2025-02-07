@@ -505,7 +505,8 @@ class LlamaModel(LlamaPreTrainedModel):
         self.norm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.rotary_emb = LlamaRotaryEmbedding(config=config)
         self.gradient_checkpointing = False
-
+        self.rope_scale = nn.Parameter(torch.ones((config.vocab_size)))
+        nn.init.ones_(self.rope_scale)
         # Initialize weights and apply final processing
         self.post_init()
 
@@ -528,7 +529,6 @@ class LlamaModel(LlamaPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
         cache_position: Optional[torch.LongTensor] = None,
-        rope_scale: Optional[torch.Tensor] = None,
         **flash_attn_kwargs: Unpack[FlashAttentionKwargs],
     ) -> Union[Tuple, BaseModelOutputWithPast]:
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
@@ -569,7 +569,7 @@ class LlamaModel(LlamaPreTrainedModel):
         hidden_states = inputs_embeds
 
         #scale distances according to the vocabulary
-        scaled_distances = rope_scale[input_ids]
+        scaled_distances = self.rope_scale[input_ids]
         position_ids = (scaled_distances).cumsum(-1)
 
         # create position embeddings to be shared across the decoder layers
@@ -764,8 +764,6 @@ class LlamaForCausalLM(LlamaPreTrainedModel, GenerationMixin):
 
         # Initialize weights and apply final processing
         self.post_init()
-        self.rope_scale = nn.Parameter(torch.ones((config.vocab_size)))
-        nn.init.ones_(self.rope_scale)
         
 
     def get_input_embeddings(self):
@@ -855,7 +853,6 @@ class LlamaForCausalLM(LlamaPreTrainedModel, GenerationMixin):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
             cache_position=cache_position,
-            rope_scale=self.rope_scale,
             **kwargs,
         )
 
