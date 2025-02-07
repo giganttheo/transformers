@@ -506,7 +506,7 @@ class LlamaModel(LlamaPreTrainedModel):
         self.rotary_emb = LlamaRotaryEmbedding(config=config)
         self.gradient_checkpointing = False
         self.rope_scale = nn.Parameter(
-            torch.ones((config.vocab_size)).to(self.device),
+            torch.ones((config.vocab_size, 1)).to(self.device),
             requires_grad=True
         )
         # Initialize weights and apply final processing
@@ -571,7 +571,7 @@ class LlamaModel(LlamaPreTrainedModel):
         hidden_states = inputs_embeds
 
         #scale distances according to the vocabulary
-        scaled_distances = self.rope_scale[input_ids]
+        scaled_distances = self.rope_scale[input_ids, 0]
         position_ids = (scaled_distances).cumsum(-1)
 
         # create position embeddings to be shared across the decoder layers
