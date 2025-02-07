@@ -505,8 +505,10 @@ class LlamaModel(LlamaPreTrainedModel):
         self.norm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.rotary_emb = LlamaRotaryEmbedding(config=config)
         self.gradient_checkpointing = False
-        self.rope_scale = nn.Parameter(torch.ones((config.vocab_size)))
-        nn.init.ones_(self.rope_scale)
+        self.rope_scale = nn.Parameter(
+            torch.ones((config.vocab_size)).to(self.device),
+            requires_grad=True
+        )
         # Initialize weights and apply final processing
         self.post_init()
 
