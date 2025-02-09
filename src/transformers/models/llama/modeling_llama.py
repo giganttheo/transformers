@@ -105,6 +105,7 @@ class LlamaRotaryEmbedding(nn.Module):
         2 - the current sequence length is in the original scale (avoid losing precision with small sequences)
         """
         seq_len = torch.max(position_ids) + 1
+
         if seq_len > self.max_seq_len_cached:  # growth
             inv_freq, self.attention_scaling = self.rope_init_fn(self.config, device, seq_len=seq_len)
             self.register_buffer("inv_freq", inv_freq, persistent=False)  # TODO joao: may break with compilation
@@ -506,7 +507,7 @@ class LlamaModel(LlamaPreTrainedModel):
         self.rotary_emb = LlamaRotaryEmbedding(config=config)
         self.gradient_checkpointing = False
         self.rope_scale = nn.Parameter(
-            torch.ones((config.vocab_size, 1)).to(self.device),
+            torch.ones((config.vocab_size, 1), dtype=self.dtype).to(self.device),
             requires_grad=True
         )
         # Initialize weights and apply final processing
@@ -573,6 +574,8 @@ class LlamaModel(LlamaPreTrainedModel):
         #scale distances according to the vocabulary
         scaled_distances = self.rope_scale[input_ids, 0]
         position_ids = (scaled_distances).cumsum(-1)
+
+        assert position_ids.requires_grad
 
         # create position embeddings to be shared across the decoder layers
         position_embeddings = self.rotary_emb(hidden_states, position_ids)
