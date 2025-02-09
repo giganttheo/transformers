@@ -573,12 +573,12 @@ class LlamaModel(LlamaPreTrainedModel):
 
         #scale distances according to the vocabulary
         scaled_distances = self.rope_scale[input_ids, 0]
-        position_ids = (scaled_distances).cumsum(-1)
+        soft_positions = (scaled_distances).cumsum(-1, dtype=hidden_states.dtype)
 
-        assert position_ids.requires_grad
+        assert soft_positions.requires_grad
 
         # create position embeddings to be shared across the decoder layers
-        position_embeddings = self.rotary_emb(hidden_states, position_ids)
+        position_embeddings = self.rotary_emb(hidden_states, soft_positions)
 
         # decoder layers
         all_hidden_states = () if output_hidden_states else None
