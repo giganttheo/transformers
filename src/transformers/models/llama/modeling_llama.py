@@ -172,7 +172,8 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
     """
     # cos = cos.unsqueeze(unsqueeze_dim)
     # sin = sin.unsqueeze(unsqueeze_dim)
-    q_embed = (q * cos) + (rotate_half(q) * sin)
+    #expand bc of grouped query
+    q_embed = (q * cos.expand(-1, q.shape[1], -1, -1)) + (rotate_half(q) * sin.expand(-1, q.shape[1], -1, -1))
     k_embed = (k * cos) + (rotate_half(k) * sin)
     return q_embed, k_embed
 
@@ -511,7 +512,7 @@ class LlamaModel(LlamaPreTrainedModel):
         #     torch.ones((config.vocab_size, 1), dtype=self.dtype).to(self.device),
         #     requires_grad=True
         # )
-        self.rope_scale = nn.Embedding(config.vocab_size, config.num_attention_heads)
+        self.rope_scale = nn.Embedding(config.vocab_size, config.num_key_value_heads)
         # Initialize weights and apply final processing
         self.post_init()
 
