@@ -125,7 +125,8 @@ class LlamaRotaryEmbedding(nn.Module):
 
         # Core RoPE block
         inv_freq_expanded = self.inv_freq[None, :, None].float().expand(position_ids.shape[0], -1, 1)
-        position_ids_expanded = position_ids[:, None, :].float()
+        # position_ids_expanded = position_ids[:, None, :].float()
+        position_ids_expanded = position_ids.float() # No need to expand the position ids anymore
         # Force float32 (see https://github.com/huggingface/transformers/pull/29285)
         device_type = x.device.type
         device_type = device_type if isinstance(device_type, str) and device_type != "mps" else "cpu"
@@ -506,10 +507,11 @@ class LlamaModel(LlamaPreTrainedModel):
         self.norm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.rotary_emb = LlamaRotaryEmbedding(config=config)
         self.gradient_checkpointing = False
-        self.rope_scale = nn.Parameter(
-            torch.ones((config.vocab_size, 1), dtype=self.dtype).to(self.device),
-            requires_grad=True
-        )
+        # self.rope_scale = nn.Parameter(
+        #     torch.ones((config.vocab_size, 1), dtype=self.dtype).to(self.device),
+        #     requires_grad=True
+        # )
+        self.rope_scale = nn.Embedding(config.vocab_size, config.num_attention_heads)
         # Initialize weights and apply final processing
         self.post_init()
 
@@ -572,10 +574,10 @@ class LlamaModel(LlamaPreTrainedModel):
         hidden_states = inputs_embeds
 
         #scale distances according to the vocabulary
-        scaled_distances = self.rope_scale[input_ids, 0]
-        soft_positions = (scaled_distances).cumsum(-1, dtype=hidden_states.dtype)
+        scaled_distances = self.rope_scale(input_ids) # (b, len, h)
+        soft_positions = (scaled_distances).cumsum(-2, dtype=hidden_states.dtype) #(b, h)
 
-        assert soft_positions.requires_grad
+        # assert soft_positions.requires_grad
 
         # create position embeddings to be shared across the decoder layers
         position_embeddings = self.rotary_emb(hidden_states, soft_positions)
