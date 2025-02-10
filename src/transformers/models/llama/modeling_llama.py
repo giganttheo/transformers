@@ -133,8 +133,8 @@ class LlamaRotaryEmbedding(nn.Module):
         with torch.autocast(device_type=device_type, enabled=False):
             freqs = (inv_freq_expanded.float() @ position_ids_expanded.float()).transpose(2, 3)
             emb = torch.cat((freqs, freqs), dim=-1)
-            cos = emb.cos()
-            sin = emb.sin()
+            cos = emb.cos().transpose(1, 2) #Updated ==> [b, l, h, d] ==> [b, h, l, d]
+            sin = emb.sin().transpose(1, 2)
 
         # Advanced RoPE types (e.g. yarn) apply a post-processing scaling factor, equivalent to scaling attention
         cos = cos * self.attention_scaling
@@ -170,7 +170,6 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
     Returns:
         `tuple(torch.Tensor)` comprising of the query and key tensors rotated using the Rotary Position Embedding.
     """
-    # Updated: no need to unsqueeze now
     # cos = cos.unsqueeze(unsqueeze_dim)
     # sin = sin.unsqueeze(unsqueeze_dim)
     q_embed = (q * cos) + (rotate_half(q) * sin)
@@ -575,13 +574,14 @@ class LlamaModel(LlamaPreTrainedModel):
         hidden_states = inputs_embeds
 
         #scale distances according to the vocabulary
-        scaled_distances = self.rope_scale(input_ids) # (b, len, h)
-        soft_positions = (scaled_distances).cumsum(-2, dtype=hidden_states.dtype) #(b, h)
+        scaled_distances = self.rope_scale(input_ids) # (b, len, heads)
+        soft_positions = (scaled_distances).cumsum(-2, dtype=hidden_states.dtype) #(b, len, heads)
 
         # assert soft_positions.requires_grad
 
         # create position embeddings to be shared across the decoder layers
-        position_embeddings = self.rotary_emb(hidden_states, soft_positions)
+        position_embeddings = self.rotary_emb(hidden_states, soft_positions) #(b, heads, len, head_dim)
+
 
         # decoder layers
         all_hidden_states = () if output_hidden_states else None
